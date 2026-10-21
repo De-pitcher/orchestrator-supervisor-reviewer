@@ -208,10 +208,40 @@ def save_cfg(cfg):
     ai("config.json").write_text(json.dumps(cfg, indent=2) + "\n", encoding="utf-8")
 
 
+def sha_config():
+    p = ai("config.json")
+    if not p.exists():
+        return ZERO
+    try:
+        cfg_obj = json.loads(p.read_text(encoding="utf-8"))
+        return sha_text(json.dumps(cfg_obj, sort_keys=True))
+    except Exception:
+        return sha_text(p.read_text(encoding="utf-8"))
+
+
+def ensure_plan_and_config_approved(st):
+    if st.get("plan_hash") != sha_text(ai("PLAN.md").read_text(encoding="utf-8")):
+        die("PLAN.md is not approved or changed since approval. The human must run: osr approve-plan --by <name>")
+    if st.get("config_hash") and st["config_hash"] != sha_config():
+        die("config.json has changed since plan approval. The human must re-run approve-plan to approve the updated configuration.", code=EXIT_INTEGRITY)
+
+
+def check_approval_secret(cfg, a):
+    expected_sha = cfg.get("approval_secret_sha")
+    if not expected_sha:
+        return
+    provided = getattr(a, "secret", None) or os.environ.get("OSR_APPROVAL_SECRET")
+    if not provided:
+        die("An approval secret is configured in config.json. You must provide --secret <secret> or set OSR_APPROVAL_SECRET.", code=EXIT_USER_ERR)
+    h = hashlib.sha256(provided.encode("utf-8")).hexdigest()
+    if h != expected_sha:
+        die("Invalid approval secret provided.", code=EXIT_USER_ERR)
+
+
 def load_state():
     p = ai("state.json")
     if not p.exists():
-        return {"plan_hash": None, "tasks": {}, "waivers": [], "signoffs": {}}
+        return {"plan_hash": None, "config_hash": None, "tasks": {}, "waivers": [], "signoffs": {}}
     return json.loads(p.read_text(encoding="utf-8"))
 
 
@@ -239,15 +269,40 @@ class Ledger:
             return []
         return [json.loads(l) for l in self.path.read_text(encoding="utf-8").splitlines() if l.strip()]
 
-    def verify_chain(self):
+    def verify_chain(self, anchor_path=None):
         prev = ZERO
-        for i, e in enumerate(self.entries()):
+        entries = self.entries()
+        for i, e in enumerate(entries):
             body = {k: v for k, v in e.items() if k != "hash"}
             if e.get("prev") != prev:
                 return False, "ledger entry %d: broken chain" % (i + 1)
             if sha_text(prev + json.dumps(body, sort_keys=True)) != e.get("hash"):
                 return False, "ledger entry %d: content was modified" % (i + 1)
             prev = e["hash"]
+
+        target_anchor = anchor_path if anchor_path is not None else (ROOT / ".osr-anchor")
+        if anchor_path is not None and not target_anchor.exists():
+            return False, "ledger anchor file does not exist: %s" % target_anchor
+
+        if target_anchor.exists():
+            try:
+                raw = target_anchor.read_text(encoding="utf-8").strip()
+                if raw.startswith("{"):
+                    ainfo = json.loads(raw)
+                    aseq = ainfo.get("seq")
+                    ahash = ainfo.get("head_hash")
+                else:
+                    aseq = None
+                    ahash = raw
+                if aseq is not None:
+                    if len(entries) < aseq or entries[aseq - 1]["hash"] != ahash:
+                        return False, "ledger anchor mismatch: rollback detected (expected seq %s with hash %s)" % (aseq, ahash)
+                elif ahash:
+                    if not any(e["hash"] == ahash for e in entries):
+                        return False, "ledger anchor mismatch: anchored hash %s missing from ledger" % ahash
+            except Exception as ex:
+                return False, "ledger anchor verification failed: %s" % ex
+
         return True, "ok"
 
     def append(self, typ, task=None, attempt=None, **data):
@@ -1013,6 +1068,8 @@ def next_action():
     p = ai("PLAN.md").read_text(encoding="utf-8")
     if st["plan_hash"] != sha_text(p):
         return "STOP: ask the human to review PLAN.md. Only the human approves it: osr approve-plan --by <name>"
+    if st.get("config_hash") and st["config_hash"] != sha_config():
+        return "STOP: config.json changed since plan approval. The human must re-run approve-plan: osr approve-plan --by <name>"
     ids = task_ids()
     if not ids:
         return "Write task cards in .ai/tasks/ (see assets/task-card.md) until every requirement is covered, then: osr task-check --all"
@@ -1190,6 +1247,7 @@ def cmd_plan_check(a):
 
 def cmd_approve(a):
     cfg, st, led = ctx()
+    check_approval_secret(cfg, a)
     plan, errs = parse_plan()
     if errs:
         die("Plan invalid:\n  " + "\n  ".join(errs))
@@ -1197,10 +1255,12 @@ def cmd_approve(a):
         die("No confirmed verification command. Run detect + confirm-commands (or set allow_no_commands for a brand-new project).")
     h = sha_text(ai("PLAN.md").read_text(encoding="utf-8"))
     st["plan_hash"] = h
+    cfg_h = sha_config()
+    st["config_hash"] = cfg_h
     save_state(st)
     by_val = join_arg(a.by)
-    led.append("plan_approved", by=by_val, plan_hash=h)
-    print("Plan approved by %s. Any later edit to PLAN.md voids approval until re-approved." % by_val)
+    led.append("plan_approved", by=by_val, plan_hash=h, config_hash=cfg_h)
+    print("Plan approved by %s. Any later edit to PLAN.md or config.json voids approval until re-approved." % by_val)
 
 
 def cmd_task_check(a):
@@ -1232,8 +1292,7 @@ def cmd_start(a):
     plan, perrs = parse_plan()
     if perrs:
         die("Plan invalid; fix before starting:\n  " + "\n  ".join(perrs))
-    if st["plan_hash"] != sha_text(ai("PLAN.md").read_text(encoding="utf-8")):
-        die("PLAN.md is not approved or changed since approval. The human must run: osr approve-plan --by <name>")
+    ensure_plan_and_config_approved(st)
     card, errs = validate_card(tid, cfg, plan)
     if errs:
         die("Task card invalid:\n  " + "\n  ".join(errs))
@@ -1304,6 +1363,7 @@ def cmd_check(a):
 
 def cmd_verify(a):
     cfg, st, led = ctx()
+    ensure_plan_and_config_approved(st)
     tid = a.task
     ts = require_active(st, tid)
     require_not_failed_out(cfg, ts, tid)
@@ -1399,6 +1459,7 @@ def cmd_verify(a):
 
 def cmd_review(a):
     cfg, st, led = ctx()
+    ensure_plan_and_config_approved(st)
     tid, stage = a.task, a.stage
     ts = require_active(st, tid)
     require_not_failed_out(cfg, ts, tid)
@@ -1447,6 +1508,7 @@ def cmd_review(a):
 
 def cmd_done(a):
     cfg, st, led = ctx()
+    ensure_plan_and_config_approved(st)
     tid = a.task
     ts = require_active(st, tid)
     card, errs = validate_card(tid, cfg, parse_plan()[0])
@@ -1493,6 +1555,7 @@ def cmd_triage(a):
 
 def cmd_unblock(a):
     cfg, st, led = ctx()
+    check_approval_secret(cfg, a)
     ts = task_state(st, a.task)
     ts["blocked"] = None
     ts["extra_attempts"] += a.extra_attempts
@@ -1510,6 +1573,8 @@ def cmd_waive(a):
     kind = a.flag.split(":")[0]
     if kind in cfg["human_only_flags"] and not a.approved_by:
         die("'%s' flags need human approval. Ask the human, then add: --approved-by <name>" % kind)
+    if kind in cfg.get("human_only_flags", []) or a.approved_by:
+        check_approval_secret(cfg, a)
     st["waivers"].append({"task": a.task, "flag": a.flag, "reason": a.reason, "approved_by": a.approved_by})
     save_state(st)
     led.append("waive", a.task, ts["attempts"], flag=a.flag, reason=a.reason, approved_by=a.approved_by)
@@ -1518,6 +1583,7 @@ def cmd_waive(a):
 
 def cmd_signoff(a):
     cfg, st, led = ctx()
+    check_approval_secret(cfg, a)
     plan, _ = parse_plan()
     if not plan or a.req not in plan:
         die("Unknown requirement %s" % a.req)
@@ -1530,6 +1596,7 @@ def cmd_signoff(a):
 
 def cmd_reset(a):
     cfg, st, led = ctx()
+    check_approval_secret(cfg, a)
     st["tasks"][a.task] = task_state({"tasks": {}}, a.task)
     if snap_path(a.task).exists():
         snap_path(a.task).unlink()
@@ -1626,7 +1693,14 @@ def cmd_audit(a):
 def cmd_status(a):
     cfg, st, led = ctx()
     ok, msg = led.verify_chain()
-    lines = ["# State", "", "Ledger: %s" % msg, ""]
+    plan_ok = st["plan_hash"] == sha_text(ai("PLAN.md").read_text(encoding="utf-8"))
+    cfg_ok = not st.get("config_hash") or st.get("config_hash") == sha_config()
+    lines = ["# State", "", "Ledger: %s" % msg]
+    if not plan_ok:
+        lines.append("Plan: VOIDED (PLAN.md changed since approval)")
+    elif not cfg_ok:
+        lines.append("Config: VOIDED (config.json changed since plan approval)")
+    lines.append("")
     for t in task_ids():
         ts = task_state(st, t)
         lines.append("- %s: %s (attempt %d, failures %d)%s" % (t, ts["status"], ts["attempts"], ts["failures"], " BLOCKED: " + ts["blocked"] if ts["blocked"] else ""))
@@ -1642,8 +1716,27 @@ def cmd_next(a):
     print(act)
 
 
+def cmd_anchor(a):
+    anchor_path = Path(a.file).resolve() if getattr(a, "file", None) else (ROOT / ".osr-anchor")
+    led = Ledger()
+    es = led.entries()
+    if not es:
+        die("Cannot anchor an empty ledger.", code=EXIT_USER_ERR)
+    head = es[-1]
+    data = {
+        "seq": head["seq"],
+        "head_hash": head["hash"],
+        "ts": head.get("ts", now()),
+    }
+    anchor_path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    if JSON_MODE:
+        emit_json({"ok": True, "exit_code": 0, "status": "ok", "anchor_file": str(anchor_path), "head_hash": head["hash"], "seq": head["seq"]}, code=0)
+    print("Ledger anchored to %s at seq %d (%s)." % (anchor_path.name, head["seq"], head["hash"][:12]))
+
+
 def cmd_ledger_verify(a):
-    ok, msg = Ledger().verify_chain()
+    anchor_p = Path(a.anchor).resolve() if getattr(a, "anchor", None) else None
+    ok, msg = Ledger().verify_chain(anchor_path=anchor_p)
     if JSON_MODE:
         emit_json({"ok": ok, "exit_code": 0 if ok else 4, "status": "ok" if ok else "integrity_violation", "message": msg}, code=0 if ok else 4)
     print("LEDGER: %s" % msg)
@@ -1678,6 +1771,7 @@ def main():
     add("plan-check", cmd_plan_check, help="validate PLAN.md")
     p = add("approve-plan", cmd_approve, help="HUMAN ONLY: approve the current PLAN.md")
     p.add_argument("--by", nargs="+", required=True)
+    p.add_argument("--secret", default=None, help="approval secret (or set OSR_APPROVAL_SECRET)")
     p = add("task-check", cmd_task_check, help="validate task cards")
     p.add_argument("task", nargs="?")
     p.add_argument("--all", action="store_true")
@@ -1704,24 +1798,31 @@ def main():
     p.add_argument("--by", nargs="+", required=True)
     p.add_argument("--note", required=True)
     p.add_argument("--extra-attempts", type=int, default=0)
+    p.add_argument("--secret", default=None, help="approval secret (or set OSR_APPROVAL_SECRET)")
     p = add("waive", cmd_waive, help="record a justified bypass of a check flag")
     p.add_argument("task")
     p.add_argument("--flag", required=True)
     p.add_argument("--reason", required=True)
     p.add_argument("--approved-by", default=None)
+    p.add_argument("--secret", default=None, help="approval secret (or set OSR_APPROVAL_SECRET)")
     p = add("signoff", cmd_signoff, help="HUMAN ONLY: sign off a manual or unverifiable requirement")
     p.add_argument("req")
     p.add_argument("--by", nargs="+", required=True)
     p.add_argument("--note", default="")
+    p.add_argument("--secret", default=None, help="approval secret (or set OSR_APPROVAL_SECRET)")
     p = add("reset", cmd_reset, help="HUMAN ONLY: reset a task (e.g. after a plan change)")
     p.add_argument("task")
     p.add_argument("--by", nargs="+", required=True)
     p.add_argument("--reason", required=True)
+    p.add_argument("--secret", default=None, help="approval secret (or set OSR_APPROVAL_SECRET)")
     add("coverage", cmd_coverage, help="requirement to task to evidence matrix")
     add("audit", cmd_audit, help="final traceability audit (writes .ai/AUDIT.md)")
     add("status", cmd_status, help="show state and write .ai/STATE.md")
     add("next", cmd_next, help="print the single next required action")
-    add("ledger-verify", cmd_ledger_verify, help="check ledger integrity")
+    p = add("anchor", cmd_anchor, help="record ledger head in an external anchor file (.osr-anchor)")
+    p.add_argument("--file", default=None, help="custom anchor file path (default: .osr-anchor)")
+    p = add("ledger-verify", cmd_ledger_verify, help="check ledger integrity")
+    p.add_argument("--anchor", default=None, help="custom anchor file path to verify against")
 
     a = ap.parse_args()
     if a.root:

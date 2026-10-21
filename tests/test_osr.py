@@ -408,6 +408,48 @@ class OsrTests(unittest.TestCase):
         self.assertNotEqual(code, 0)
         self.assertIn("test_special", out)
 
+    def test_config_tampering_voids_plan_approval(self):
+        p = self.p
+        p.setup_ready()
+        cfg = json.loads(p.read(".ai/config.json"))
+        cfg["max_attempts"] = 99
+        p.write(".ai/config.json", json.dumps(cfg))
+        code, out = p.osr("start", "T1", "--model", "m")
+        self.assertNotEqual(code, 0)
+        self.assertIn("config", out.lower())
+        self.assertIn("approval", out.lower())
+
+    def test_approval_secret_enforcement(self):
+        p = self.p
+        p.setup_ready(approve=False)
+        cfg = json.loads(p.read(".ai/config.json"))
+        import hashlib
+        cfg["approval_secret_sha"] = hashlib.sha256(b"topsecret123").hexdigest()
+        p.write(".ai/config.json", json.dumps(cfg))
+        code, out = p.osr("approve-plan", "--by", "human")
+        self.assertNotEqual(code, 0)
+        self.assertIn("secret", out.lower())
+        code, out = p.osr("approve-plan", "--by", "human", "--secret", "wrongsecret")
+        self.assertNotEqual(code, 0)
+        self.assertIn("secret", out.lower())
+        code, out = p.osr("approve-plan", "--by", "human", "--secret", "topsecret123")
+        self.assertEqual(code, 0, out)
+
+    def test_anchor_verification_detects_ledger_rollback(self):
+        p = self.p
+        p.setup_ready()
+        code, out = p.osr("anchor")
+        self.assertEqual(code, 0, out)
+        anchor_file = p.dir / ".osr-anchor"
+        self.assertTrue(anchor_file.exists())
+        code, out = p.osr("ledger-verify")
+        self.assertEqual(code, 0, out)
+        lines = p.read(".ai/ledger.jsonl").splitlines()
+        p.write(".ai/ledger.jsonl", "\n".join(lines[:-1]) + "\n")
+        code, out = p.osr("ledger-verify")
+        self.assertNotEqual(code, 0)
+        self.assertIn("anchor", out.lower())
+
 
 if __name__ == "__main__":
     unittest.main()
