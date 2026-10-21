@@ -327,6 +327,40 @@ class OsrTests(unittest.TestCase):
         p.osr("start", "T1", "--model", "m")
         self.assertIn("verify T1", p.osr("next")[1])
 
+    def test_json_output_and_exit_codes(self):
+        p = self.p
+        p.setup_ready()
+        # Test osr next with --json
+        code, out = p.osr("next", "--json")
+        self.assertEqual(code, 0, out)
+        data = json.loads(out)
+        self.assertTrue(data.get("ok"))
+        self.assertIn("action", data)
+        self.assertEqual(data["action"], "osr start T1 --model <your-model-name>")
+
+        # Test gate rejection with --json: verify before implementing returns exit code 2
+        p.osr("start", "T1", "--model", "m")
+        code, out = p.osr("verify", "T1", "--json")
+        self.assertEqual(code, 2, "Gate failure should return exit code 2")
+        data = json.loads(out)
+        self.assertFalse(data.get("ok"))
+        self.assertEqual(data.get("exit_code"), 2)
+
+    def test_ledger_locking_concurrency(self):
+        p = self.p
+        p.setup_ready()
+        lock_file = p.dir / ".ai" / ".ledger.lock"
+        # Simulate active lock held by another process
+        lock_file.write_text("locked", encoding="utf-8")
+        code, out = p.osr("start", "T1", "--model", "m")
+        # Should detect that lock is held
+        self.assertNotEqual(code, 0)
+        self.assertIn("lock", out.lower())
+        # Removing lock allows operation to succeed
+        lock_file.unlink()
+        code, out = p.osr("start", "T1", "--model", "m")
+        self.assertEqual(code, 0, out)
+
 
 if __name__ == "__main__":
     unittest.main()

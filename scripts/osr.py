@@ -132,9 +132,66 @@ def join_arg(val):
     return str(val) if val is not None else ""
 
 
+JSON_MODE = False
+
+
+def emit_json(payload, code=0):
+    if "exit_code" not in payload:
+        payload["exit_code"] = code
+    if "ok" not in payload:
+        payload["ok"] = (code == 0)
+    print(json.dumps(payload, indent=2))
+    sys.exit(code)
+
+
 def die(msg, code=1):
+    if JSON_MODE:
+        status_map = {1: "error", 2: "gate_failed", 3: "blocked", 4: "integrity_violation"}
+        emit_json({"ok": False, "exit_code": code, "error": msg, "status": status_map.get(code, "error")}, code=code)
     print(msg, file=sys.stderr)
     sys.exit(code)
+
+
+_LOCK_DEPTH = 0
+
+
+class LedgerLock:
+    def __init__(self, timeout=0.3):
+        self.lock = ai(".ledger.lock")
+        self.timeout = timeout
+        self.acquired = False
+
+    def __enter__(self):
+        global _LOCK_DEPTH
+        if _LOCK_DEPTH > 0:
+            _LOCK_DEPTH += 1
+            return self
+        start = time.time()
+        while True:
+            try:
+                self.lock.parent.mkdir(parents=True, exist_ok=True)
+                fd = os.open(str(self.lock), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+                os.write(fd, ("pid=%d ts=%f\n" % (os.getpid(), time.time())).encode("utf-8"))
+                os.close(fd)
+                self.acquired = True
+                _LOCK_DEPTH = 1
+                return self
+            except FileExistsError:
+                if (time.time() - start) >= self.timeout:
+                    die("Ledger lock is held (%s). Another process is writing or a previous run crashed." % self.lock, code=1)
+                time.sleep(0.05)
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        global _LOCK_DEPTH
+        if _LOCK_DEPTH > 1:
+            _LOCK_DEPTH -= 1
+            return
+        _LOCK_DEPTH = 0
+        if self.acquired and self.lock.exists():
+            try:
+                self.lock.unlink()
+            except OSError:
+                pass
 
 
 def load_cfg():
@@ -193,13 +250,14 @@ class Ledger:
         return True, "ok"
 
     def append(self, typ, task=None, attempt=None, **data):
-        es = self.entries()
-        prev = es[-1]["hash"] if es else ZERO
-        body = {"seq": len(es) + 1, "ts": now(), "type": typ, "task": task, "attempt": attempt, "data": data, "prev": prev}
-        body["hash"] = sha_text(prev + json.dumps(body, sort_keys=True))
-        with open(self.path, "a", encoding="utf-8") as f:
-            f.write(json.dumps(body) + "\n")
-        return body
+        with LedgerLock(timeout=0.3):
+            es = self.entries()
+            prev = es[-1]["hash"] if es else ZERO
+            body = {"seq": len(es) + 1, "ts": now(), "type": typ, "task": task, "attempt": attempt, "data": data, "prev": prev}
+            body["hash"] = sha_text(prev + json.dumps(body, sort_keys=True))
+            with open(self.path, "a", encoding="utf-8") as f:
+                f.write(json.dumps(body) + "\n")
+            return body
 
     def latest(self, typ, task=None, attempt=None, stage=None):
         for e in reversed(self.entries()):
@@ -222,7 +280,7 @@ def ctx(require_chain=True):
     if require_chain:
         ok, msg = led.verify_chain()
         if not ok:
-            die("LEDGER INTEGRITY FAILURE: %s\nThe ledger is append-only and written only by osr. Stop and tell the human." % msg)
+            die("LEDGER INTEGRITY FAILURE: %s\nThe ledger is append-only and written only by osr. Stop and tell the human." % msg, code=4)
     return cfg, st, led
 
 
@@ -500,9 +558,10 @@ def run_recorded(cmd, cfg, label):
     code, text, secs, to = run_cmd(cmd, cfg)
     suspect = bool(NO_TESTS.search(text)) and code == 0
     log = save_log(0, label, text)
-    print("\n$ %s\n%s\n[exit %s%s | %ss | log .ai/logs/%s]" % (cmd, tail(text), code, " TIMEOUT" if to else "", secs, log))
-    if suspect:
-        print("SUSPECT: exit 0 but output says no tests ran. Treated as FAILURE.")
+    if not JSON_MODE:
+        print("\n$ %s\n%s\n[exit %s%s | %ss | log .ai/logs/%s]" % (cmd, tail(text), code, " TIMEOUT" if to else "", secs, log))
+        if suspect:
+            print("SUSPECT: exit 0 but output says no tests ran. Treated as FAILURE.")
     return {
         "cmd": cmd, "exit": code, "timeout": to, "suspect": suspect, "secs": secs,
         "output_sha": sha_text(text), "tail": tail(text, 15)[-1500:], "log": log,
@@ -1119,11 +1178,22 @@ def cmd_start(a):
             if not e or e["seq"] < req.get("seq", 0) or not e["data"].get("ok"):
                 die("Triage said 'environment' fault: fix the environment, then run: osr env-check (must pass).")
     cur = walk_tree(cfg)
-    if not snap_path(tid).exists():
-        snap_path(tid).write_text(json.dumps(cur), encoding="utf-8")
-    ts.update({"status": "in_progress", "attempts": ts["attempts"] + 1, "failures": 0, "model": a.model or "unknown", "input_hash": ih, "requires": None})
-    save_state(st)
-    led.append("start", tid, ts["attempts"], model=ts["model"], input_hash=ih)
+    with LedgerLock(timeout=0.3):
+        if not snap_path(tid).exists():
+            snap_path(tid).write_text(json.dumps(cur), encoding="utf-8")
+        ts.update({"status": "in_progress", "attempts": ts["attempts"] + 1, "failures": 0, "model": a.model or "unknown", "input_hash": ih, "requires": None})
+        save_state(st)
+        led.append("start", tid, ts["attempts"], model=ts["model"], input_hash=ih)
+    if JSON_MODE:
+        emit_json({
+            "ok": True,
+            "exit_code": 0,
+            "status": "ok",
+            "task": tid,
+            "attempt": ts["attempts"],
+            "model": ts["model"],
+            "allowed_files": card["allowed_files"]
+        }, code=0)
     print("Task %s started (attempt %d). Allowed files: %s" % (tid, ts["attempts"], ", ".join(card["allowed_files"])))
     print("Read ONLY the card and its context_files. Implement, then run: osr verify %s" % tid)
 
@@ -1148,14 +1218,26 @@ def cmd_verify(a):
         die("Task card invalid:\n  " + "\n  ".join(errs))
     snap = load_snap(tid)
     r = run_check(cfg, st, tid, card, snap, walk_tree(cfg))
-    print_check(r)
+    if not JSON_MODE:
+        print_check(r)
     led.append("check", tid, ts["attempts"], ok=r["ok"], fp=r["fp"], flags=r["flags"], unchecked=r["refs"]["unchecked"][:30])
     if not r["ok"]:
         ts["failures"] += 1
         save_state(st)
         led.append("verify", tid, ts["attempts"], ok=False, fp=r["fp"], reason="pre-check failed", results=[])
+        if JSON_MODE:
+            emit_json({
+                "ok": False,
+                "exit_code": 2,
+                "status": "gate_failed",
+                "task": tid,
+                "reason": "static checks failed",
+                "failures": ts["failures"],
+                "max_failures": cfg["max_inner_failures"],
+                "flags": r["flags"]
+            }, code=2)
         print("VERIFY: FAIL (static checks failed; commands not run). Failures this attempt: %d/%d" % (ts["failures"], cfg["max_inner_failures"]))
-        sys.exit(1)
+        sys.exit(2)
     cmds = []
     for n in cfg["global_verify"]:
         if n not in cfg["commands"]:
@@ -1173,17 +1255,30 @@ def cmd_verify(a):
     cur2 = walk_tree(cfg)
     r2 = run_check(cfg, st, tid, card, snap, cur2)
     if not r2["ok"] and r["ok"]:
-        print("The verification run itself changed files outside scope or created flagged content:")
-        print_check(r2)
+        if not JSON_MODE:
+            print("The verification run itself changed files outside scope or created flagged content:")
+            print_check(r2)
         ok = False
     led.append("check", tid, ts["attempts"], ok=r2["ok"], fp=r2["fp"], flags=r2["flags"], unchecked=r2["refs"]["unchecked"][:30])
-    led.append("verify", tid, ts["attempts"], ok=ok, fp=r2["fp"], results=[{k: v for k, v in x.items() if k != "tail"} for x in results])
+    clean_results = [{k: v for k, v in x.items() if k != "tail"} for x in results]
+    led.append("verify", tid, ts["attempts"], ok=ok, fp=r2["fp"], results=clean_results)
     if not ok:
         ts["failures"] += 1
         save_state(st)
+    if JSON_MODE:
+        emit_json({
+            "ok": ok,
+            "exit_code": 0 if ok else 2,
+            "status": "ok" if ok else "gate_failed",
+            "task": tid,
+            "failures": ts["failures"],
+            "max_failures": cfg["max_inner_failures"],
+            "results": clean_results,
+            "next": next_action()
+        }, code=0 if ok else 2)
     print("\nVERIFY: %s" % ("PASS" if ok else "FAIL  (failures this attempt: %d/%d)" % (ts["failures"], cfg["max_inner_failures"])))
     print("NEXT: %s" % next_action())
-    sys.exit(0 if ok else 1)
+    sys.exit(0 if ok else 2)
 
 
 def cmd_review(a):
@@ -1418,24 +1513,38 @@ def cmd_status(a):
 
 
 def cmd_next(a):
-    print(next_action())
+    act = next_action()
+    if JSON_MODE:
+        emit_json({"ok": True, "exit_code": 0, "status": "ok", "action": act}, code=0)
+    print(act)
 
 
 def cmd_ledger_verify(a):
     ok, msg = Ledger().verify_chain()
+    if JSON_MODE:
+        emit_json({"ok": ok, "exit_code": 0 if ok else 4, "status": "ok" if ok else "integrity_violation", "message": msg}, code=0 if ok else 4)
     print("LEDGER: %s" % msg)
-    sys.exit(0 if ok else 1)
+    sys.exit(0 if ok else 4)
 
 
 def main():
-    global ROOT
-    ap = argparse.ArgumentParser(prog="osr", description="Orchestrator-Supervisor-Reviewer enforcement CLI")
+    global ROOT, JSON_MODE
+    common = argparse.ArgumentParser(add_help=False)
+    common.add_argument("--json", action="store_true", help="output structured JSON")
+
+    class CustomParser(argparse.ArgumentParser):
+        def error(self, message):
+            if "--json" in sys.argv:
+                emit_json({"ok": False, "exit_code": 1, "error": message, "status": "error"}, code=1)
+            super().error(message)
+
+    ap = CustomParser(prog="osr", parents=[common], description="Orchestrator-Supervisor-Reviewer enforcement CLI")
     ap.add_argument("--root", default=None, help="project root (default: current directory)")
     ap.add_argument("--version", action="version", version=VERSION)
     sp = ap.add_subparsers(dest="cmd", required=True)
 
-    def add(name, fn, **kw):
-        p = sp.add_parser(name, **kw)
+    def add(name, fn, parents=(), **kw):
+        p = sp.add_parser(name, parents=[common] + list(parents), **kw)
         p.set_defaults(fn=fn)
         return p
 
@@ -1494,6 +1603,8 @@ def main():
     a = ap.parse_args()
     if a.root:
         ROOT = Path(a.root).resolve()
+    if getattr(a, "json", False):
+        JSON_MODE = True
     a.fn(a)
 
 

@@ -82,7 +82,7 @@ At any point, `osr next` prints the single next required action. That is the com
 | `task-check [--all]` | validate cards: coverage, narrow scope, context budget, real verify command |
 | `start`, `check`, `verify`, `review`, `done` | the per-task loop |
 | `triage`, `unblock` (human), `reset` (human) | failure handling |
-| `waive`, `signoff` (human) | recorded, visible exceptions and manual approvals |
+| `waive` (human-approved for sensitive flags), `signoff` (human) | recorded, visible exceptions and manual approvals |
 | `next`, `status`, `coverage`, `audit`, `ledger-verify` | orientation and final proof |
 
 ## How it works, briefly
@@ -94,7 +94,7 @@ At any point, `osr next` prints the single next required action. That is the com
 
 ## Guarantees and limits
 
-You get **no silent failure**, not 100% correctness. The plan can be wrong, tests can be weak, and taste has no check. Ways to raise the bar (tests-first approved by a human, a different model as reviewer, type-checkers and mutation testing as confirmed commands) are in [`references/guarantees.md`](references/guarantees.md). The human-only commands are honor-system unless your harness prevents the AI from running them; see [`references/setups.md`](references/setups.md).
+You get **no silent failure**, not 100% correctness. The plan can be wrong, tests can be weak, and taste has no check. Ways to raise the bar (tests-first approved by a human, a different model as reviewer, type-checkers and mutation testing as confirmed commands) are in [`references/guarantees.md`](references/guarantees.md). The human-only commands and waiver approvals are honor-system unless your harness prevents the AI from running them; see [`references/setups.md`](references/setups.md).
 
 ## Status
 

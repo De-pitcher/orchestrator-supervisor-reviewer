@@ -1,6 +1,6 @@
 ---
 name: orchestrator-supervisor-reviewer
-description: A disciplined workflow where one AI plans, delegates, supervises and reviews software work, and a deterministic script (not the AI's own claims) decides what counts as done. Use whenever the user asks you to orchestrate, supervise, manage or review a coding task, implement a design plan or spec, build a feature or project end to end, coordinate other AI agents or models, verify AI-written code, reduce hallucinations or drift, or says things like "follow the plan", "make sure nothing is missed", "act as tech lead or reviewer". Works with any language, stack and model, including weaker ones. Use it even if the user does not name it, whenever the work spans more than one file or more than one step.
+description: A disciplined workflow where one AI plans, delegates, supervises and reviews software work, and a deterministic script (not the AI's own claims) decides what counts as done. Use when explicitly asked to orchestrate, supervise, manage or review a coding task, implement a formal design plan or spec, build a multi-task feature or project end-to-end, coordinate AI agents/models, or verify AI-written code under strict supervisory governance ("follow the plan", "make sure nothing is missed", "act as tech lead/supervisor/reviewer"). Do not invoke for simple single-step edits or routine one-file changes. Works with any language, stack and model, including weaker ones.
 ---
 
 # Orchestrator, Supervisor, Reviewer
@@ -36,7 +36,7 @@ Each has a reason. The reason matters more than the rule, so you can apply it to
 7. **Surface assumptions, do not bury them.** Ambiguity goes to the human before it goes into code. A wrong guess implemented confidently costs more than a question.
 8. **Every retry must change something.** Same input gives the same failure. Diagnose first (see "When something fails").
 9. **Mark what you cannot verify as UNVERIFIED.** Visual quality, UX, tone, intent have no machine check. Say so and let the human sign off. Never mark them passed.
-10. **Humans own five commands:** `approve-plan`, `unblock`, `signoff`, `reset`, and approval of waivers on tests, skips or secrets. Never run these yourself. Stop and ask.
+10. **Humans own supervisory authority.** Four commands (`approve-plan`, `unblock`, `signoff`, `reset`) plus approval of sensitive waivers (`waive --approved-by` for tests, skips or secrets) belong exclusively to the human operator. Never run these yourself. Stop and ask.
 
 ## Hats
 
