@@ -1028,7 +1028,7 @@ def validate_spec_review(text, task_reqs, plan):
     return errs, reqs, derived
 
 
-def validate_quality_review(text):
+def validate_quality_review(text, card=None, plan=None):
     errs, items = [], {}
     for raw in text.splitlines():
         ln = raw.strip().lstrip("-* ").replace("**", "")
@@ -1061,6 +1061,31 @@ def validate_quality_review(text):
                 brk.append(m.group(1).strip())
     if len(brk) < 3:
         errs.append("BREAK_ATTEMPTS needs 3+ concrete ways this code could fail, each 25+ chars ('- ' bullets)")
+
+    # Seams section and citation validation
+    declared_seams = card.get("seams", []) if card else []
+    if declared_seams:
+        plan_seams = getattr(plan, "seams", {}) if plan else {}
+        cited_seams = {s: [] for s in declared_seams}
+        for raw in text.splitlines():
+            m = re.search(r'(?:SEAM\s+)?([a-zA-Z0-9_-]+)\s*:.*?@\s*(\S+?):(\d+)\s+"(.+?)"', raw)
+            if m:
+                sid, path, line_no, snippet = m.group(1), m.group(2), int(m.group(3)), m.group(4)
+                if sid in declared_seams:
+                    expected_source = plan_seams.get(sid, {}).get("source", "").strip()
+                    if Path(path).as_posix() != Path(expected_source).as_posix():
+                        errs.append("seam '%s': citation points to '%s', but authoritative source is '%s' (citations must point into the upstream source, not consumer files)" % (sid, path, expected_source))
+                    else:
+                        e = evidence_error(path, line_no, snippet)
+                        if e:
+                            errs.append("seam '%s': %s" % (sid, e))
+                        else:
+                            cited_seams[sid].append((path, line_no, snippet))
+        for s in declared_seams:
+            if not cited_seams.get(s):
+                expected = plan_seams.get(s, {}).get("source", "").strip()
+                errs.append("seam '%s' has no citations pointing into its authoritative source '%s' (format: SEAM %s: @ <source>:<line> \"snippet\")" % (s, expected, s))
+
     declared = re.search(r"^\s*VERDICT:\s*(PASS|FAIL)\b", text, re.M)
     derived = "FAIL" if any(v == "FAIL" for v in items.values()) else "PASS"
     if not declared:
@@ -1584,7 +1609,7 @@ def cmd_review(a):
     if stage == "spec":
         errs, items, verdict = validate_spec_review(text, card["requirements"], parse_plan()[0])
     else:
-        errs, items, verdict = validate_quality_review(text)
+        errs, items, verdict = validate_quality_review(text, card=card, plan=parse_plan()[0])
     if errs:
         print("REVIEW REJECTED (malformed or unsupported claims):")
         for e in errs:

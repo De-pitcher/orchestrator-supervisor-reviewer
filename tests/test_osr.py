@@ -798,6 +798,105 @@ Done.
         finally:
             p.cleanup()
 
+    def test_quality_review_seam_citations_enforcement(self):
+        p = Project()
+        try:
+            p.osr("init")
+            cfg = json.loads(p.read(".ai/config.json"))
+            cfg["commands"] = {"test": {"cmd": f'"{sys.executable}" -m unittest discover -s tests -t . -q', "verified": False}}
+            cfg["global_verify"] = ["test"]
+            p.write(".ai/config.json", json.dumps(cfg))
+            p.osr("confirm-commands")
+
+            plan_text = """# Plan: Service Integration
+## Goal
+Integrate external user service.
+## Non-goals
+None.
+## Requirements
+- R1: Consumer connects to external user service API endpoint
+  - AC: fetches user details over HTTP REST endpoint successfully
+  - Check: auto
+## Seams
+| seam id | consumer | provider | authoritative source | how it is checked |
+|---|---|---|---|---|
+| user-api | client | user-service | services/user_service.py | contract-test |
+
+## Assumptions
+- [x] Python 3 only
+## Open questions
+"""
+            p.write(".ai/PLAN.md", plan_text)
+            p.write("services/user_service.py", '"""User service authoritative source."""\ndef fetch_user(uid):\n    return {"user_id": uid, "name": "Alice"}\n')
+
+            card_with_seam = f"""# T1: Consumer Task
+id: T1
+requirements: R1
+seams: user-api
+allowed_files: src/calc.py, tests/test_calc.py
+context_files: .ai/PLAN.md, services/user_service.py
+verify: "{sys.executable}" -m unittest discover -s tests -t . -q
+
+## Goal
+Consumer task with seam.
+## Constraints
+None.
+## Do not
+None.
+## Definition of done
+Done.
+"""
+            p.write(".ai/tasks/T1.md", card_with_seam)
+            p.osr("approve-plan", "--by", "human")
+            p.osr("start", "T1", "--model", "model-a")
+            p.implement()
+            code, out = p.osr("verify", "T1")
+            self.assertEqual(code, 0, out)
+
+            # Pass spec review first
+            p.write(".ai/reviews/T1.spec.md", 'R1: PASS @ src/calc.py:2 "def add(a, b):"\n\nVERDICT: PASS\n')
+            code, out = p.osr("review", "T1", "spec", "--reviewer", "model-b")
+            self.assertEqual(code, 0, out)
+
+            # 1. Quality review missing seam citations when seams: user-api is declared -> must be rejected
+            base_quality = """C1: PASS - inspected all imports
+C2: PASS - edge cases handled properly
+C3: NA - no user credentials involved
+C4: PASS - no TODO or placeholder stubs
+C5: PASS - callers match signature
+C6: PASS - tests assert exact outputs
+C7: PASS - style matches existing code
+C8: PASS - only allowed files changed
+
+BREAK_ATTEMPTS:
+- Pass empty string and verify graceful error handling
+- Pass oversized number and verify no memory exhaustion
+- Run concurrently and verify no race condition
+
+VERDICT: PASS
+"""
+            p.write(".ai/reviews/T1.quality.md", base_quality)
+            code, out = p.osr("review", "T1", "quality", "--reviewer", "model-b")
+            self.assertNotEqual(code, 0)
+            self.assertIn("user-api", out)
+            self.assertIn("citation", out.lower())
+
+            # 2. Quality review citing only consumer files (src/calc.py) for the seam -> must be rejected
+            consumer_citation_quality = base_quality + '\n## Seams\nSEAM user-api: @ src/calc.py:2 "def add(a, b):"\n'
+            p.write(".ai/reviews/T1.quality.md", consumer_citation_quality)
+            code, out = p.osr("review", "T1", "quality", "--reviewer", "model-b")
+            self.assertNotEqual(code, 0)
+            self.assertIn("services/user_service.py", out)
+
+            # 3. Quality review citing upstream authoritative source correctly -> must pass
+            valid_seam_quality = base_quality + '\n## Seams\nSEAM user-api: @ services/user_service.py:2 "def fetch_user(uid):"\n'
+            p.write(".ai/reviews/T1.quality.md", valid_seam_quality)
+            code, out = p.osr("review", "T1", "quality", "--reviewer", "model-b")
+            self.assertEqual(code, 0, out)
+            self.assertIn("REVIEW RECORDED: quality PASS", out)
+        finally:
+            p.cleanup()
+
 
 
 

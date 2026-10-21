@@ -10,6 +10,15 @@ C6: PASS - new tests assert exact outputs; no skips; assertion count rose from 4
 C7: PASS - naming and error style match neighbouring modules
 C8: PASS - only files named in allowed_files changed
 
+## Seams
+<!-- Required ONLY if the task card declares seams:.
+     For each declared seam, list every external field or call the code uses,
+     each cited as:
+     SEAM <seam-id>: @ <authoritative-source-path>:<line> "exact snippet"
+     pointing directly into the authoritative upstream source.
+-->
+SEAM <seam-id>: @ <authoritative-source-path>:<line> "<exact snippet>"
+
 BREAK_ATTEMPTS:
 - Pass a 10 MB string to parse(); check it does not load everything into memory twice
 - Call format_name() with surrogate-pair emoji and confirm no crash or truncation
