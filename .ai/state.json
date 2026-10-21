@@ -50,15 +50,28 @@
       }
     },
     "T3": {
-      "status": "todo",
-      "attempts": 0,
+      "status": "done",
+      "attempts": 1,
       "failures": 0,
-      "model": null,
-      "input_hash": null,
+      "model": "gemini-3.8-flash",
+      "input_hash": "107d30585ab411034f7492f6ac133183f42bf82d50492633a78cb9b01d21d873",
       "triaged_attempt": 0,
       "blocked": null,
       "requires": null,
-      "extra_attempts": 0
+      "extra_attempts": 0,
+      "baseline": {
+        "test": {
+          "ok": true,
+          "exit": 0,
+          "sha": "ae315d0876a26b78968a0f211f8b685a27c1e01d092f17e9b88c44150c45e37a"
+        },
+        "task_0": {
+          "cmd": "python -m unittest discover -s tests -v",
+          "ok": true,
+          "exit": 0,
+          "sha": "8271e29d99882b322b4107db400e11b502aace01291783e6ed18d25db38b080d"
+        }
+      }
     },
     "T4": {
       "status": "todo",
@@ -120,5 +133,6 @@
   },
   "waivers": [],
   "signoffs": {},
-  "config_hash": "bb541d449833ac034f127b3987619424ea8452694f8c6c8cd953b0fd0f672ad9"
+  "config_hash": "bb541d449833ac034f127b3987619424ea8452694f8c6c8cd953b0fd0f672ad9",
+  "fixtures": {}
 }

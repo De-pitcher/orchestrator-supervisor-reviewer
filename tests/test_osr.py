@@ -593,11 +593,12 @@ class OsrTests(unittest.TestCase):
         self.assertEqual(report["catch_rate"], 1.0)
         self.assertEqual(report["false_positive_rate"], 0.0)
         self.assertGreaterEqual(report["total_cheats_tested"], 12)
-        self.assertEqual(len(report["caught_vectors"]), 9)
-        self.assertEqual(len(report["known_misses"]), 3)
+        self.assertEqual(len(report["caught_vectors"]), 10)
+        self.assertEqual(len(report["known_misses"]), 2)
+        self.assertIn("V9", [v["id"] for v in report["caught_vectors"]])
         self.assertIn("V10", [v["id"] for v in report["caught_vectors"]])
         miss_ids = [m["id"] for m in report["known_misses"]]
-        self.assertEqual(miss_ids, ["V9", "V11", "V12"])
+        self.assertEqual(miss_ids, ["V11", "V12"])
 
     def test_seams_plan_check_warning_when_seams_table_missing(self):
         p = Project()
@@ -894,6 +895,226 @@ VERDICT: PASS
             code, out = p.osr("review", "T1", "quality", "--reviewer", "model-b")
             self.assertEqual(code, 0, out)
             self.assertIn("REVIEW RECORDED: quality PASS", out)
+        finally:
+            p.cleanup()
+
+    def test_fixture_add_and_verify_hash_integrity(self):
+        p = Project()
+        try:
+            p.osr("init")
+            cfg = json.loads(p.read(".ai/config.json"))
+            cfg["commands"] = {"test": {"cmd": f'"{sys.executable}" -m unittest discover -s tests -t . -q', "verified": False}}
+            cfg["global_verify"] = ["test"]
+            p.write(".ai/config.json", json.dumps(cfg))
+            p.osr("confirm-commands")
+
+            plan_text = """# Plan
+## Goal
+Fixture testing.
+## Non-goals
+None.
+## Requirements
+- R1: Fixture verification
+  - AC: code verifies fixture hash matches registered sha256
+  - Check: auto
+## Seams
+| seam id | consumer | provider | authoritative source | how it is checked |
+|---|---|---|---|---|
+| user-api | client | service | services/user.py | fixture-test |
+## Assumptions
+- [x] Python 3 only
+## Open questions
+"""
+            p.write(".ai/PLAN.md", plan_text)
+            p.write("services/user.py", 'def fetch_user(): return {"id": 1}\n')
+            p.write("tests/fixtures/user.json", '{"id": 1, "name": "Alice"}\n')
+
+            # 1. fixture-add registers fixture hash and metadata
+            code, out = p.osr("fixture-add", "tests/fixtures/user.json", "--seam", "user-api", "--source", "curl from staging")
+            self.assertEqual(code, 0, out)
+            self.assertIn("Fixture registered", out)
+            state = json.loads(p.read(".ai/state.json"))
+            self.assertIn("tests/fixtures/user.json", state.get("fixtures", {}))
+
+            card = f"""# T1: Fixture task
+id: T1
+requirements: R1
+seams: user-api
+fixtures: tests/fixtures/user.json
+allowed_files: src/calc.py, tests/test_calc.py
+context_files: .ai/PLAN.md, services/user.py
+verify: "{sys.executable}" -m unittest discover -s tests -t . -q
+
+## Goal
+Use fixture.
+## Constraints
+None.
+## Do not
+None.
+## Definition of done
+Done.
+"""
+            p.write(".ai/tasks/T1.md", card)
+            p.osr("approve-plan", "--by", "human")
+            p.osr("start", "T1")
+            p.implement()
+
+            # 2. Verify passes with matching fixture
+            code, out = p.osr("verify", "T1")
+            self.assertEqual(code, 0, out)
+
+            # 3. Tamper fixture content without re-registration -> verify must fail!
+            p.write("tests/fixtures/user.json", '{"id": 1, "name": "Tampered"}\n')
+            code, out = p.osr("verify", "T1")
+            self.assertNotEqual(code, 0)
+            self.assertIn("fixture hash mismatch", out.lower())
+        finally:
+            p.cleanup()
+
+    def test_unanchored_mock_heuristic_flags_mock_without_fixture_and_waiver_resolves(self):
+        p = Project()
+        try:
+            p.osr("init")
+            cfg = json.loads(p.read(".ai/config.json"))
+            cfg["commands"] = {"test": {"cmd": f'"{sys.executable}" -m unittest discover -s tests -t . -q', "verified": False}}
+            cfg["global_verify"] = ["test"]
+            p.write(".ai/config.json", json.dumps(cfg))
+            p.osr("confirm-commands")
+
+            plan_text = """# Plan
+## Goal
+Mock test.
+## Non-goals
+None.
+## Requirements
+- R1: Mock verification
+  - AC: mocks without registered fixture are flagged unless waived
+  - Check: auto
+## Seams
+| seam id | consumer | provider | authoritative source | how it is checked |
+|---|---|---|---|---|
+| user-api | client | service | services/user.py | mock-test |
+## Assumptions
+- [x] Python 3 only
+## Open questions
+"""
+            p.write(".ai/PLAN.md", plan_text)
+            p.write("services/user.py", 'def fetch_user(): return {"user_id": 1}\n')
+
+            card = f"""# T1: Mock task
+id: T1
+requirements: R1
+seams: user-api
+allowed_files: src/calc.py, tests/test_calc.py
+context_files: .ai/PLAN.md, services/user.py
+verify: "{sys.executable}" -m unittest discover -s tests -t . -q
+
+## Goal
+Implement client with mock.
+## Constraints
+None.
+## Do not
+None.
+## Definition of done
+Done.
+"""
+            p.write(".ai/tasks/T1.md", card)
+            p.osr("approve-plan", "--by", "human")
+            p.osr("start", "T1")
+            p.write("src/calc.py", "def get_name(): return 'Alice'\n")
+            # Unanchored mock in test file:
+            p.write("tests/test_calc.py", """import unittest
+from unittest.mock import patch
+
+class TestMock(unittest.TestCase):
+    @patch("src.calc.get_name")
+    def test_mock(self, m):
+        m.return_value = 'Alice'
+        self.assertEqual(m(), 'Alice')
+""")
+            # 1. Verify must flag unanchored-mock on card declaring seams
+            code, out = p.osr("verify", "T1")
+            self.assertNotEqual(code, 0)
+            self.assertIn("unanchored-mock", out.lower())
+
+            # 2. Waive unanchored-mock -> verify passes
+            code, out = p.osr("waive", "T1", "unanchored-mock", "--reason", "Synthetic unit mock approved", "--approved-by", "human")
+            self.assertEqual(code, 0, out)
+            code, out = p.osr("verify", "T1")
+            self.assertEqual(code, 0, out)
+        finally:
+            p.cleanup()
+
+    def test_card_with_fixture_and_conformance_verifies_cleanly(self):
+        p = Project()
+        try:
+            p.osr("init")
+            cfg = json.loads(p.read(".ai/config.json"))
+            cfg["commands"] = {
+                "test": {"cmd": f'"{sys.executable}" -m unittest discover -s tests -t . -q', "verified": False},
+                "conformance_check": {"cmd": f'"{sys.executable}" -c "import json; json.load(open(\'tests/fixtures/user.json\'))"', "verified": False},
+            }
+            cfg["global_verify"] = ["test"]
+            p.write(".ai/config.json", json.dumps(cfg))
+            p.write("services/user.py", 'def fetch_user(): return {"id": 1, "name": "Alice"}\n')
+            p.write("tests/fixtures/user.json", '{"id": 1, "name": "Alice"}\n')
+            p.osr("confirm-commands")
+
+            plan_text = """# Plan
+## Goal
+Fixture and conformance testing.
+## Non-goals
+None.
+## Requirements
+- R1: Conformance verification
+  - AC: fixture and conformance commands run and verify cleanly
+  - Check: auto
+## Seams
+| seam id | consumer | provider | authoritative source | how it is checked |
+|---|---|---|---|---|
+| user-api | client | service | services/user.py | fixture-conformance |
+## Assumptions
+- [x] Python 3 only
+## Open questions
+"""
+            p.write(".ai/PLAN.md", plan_text)
+
+            p.osr("fixture-add", "tests/fixtures/user.json", "--seam", "user-api", "--source", "staging traffic capture")
+
+            card = f"""# T1: Conformance task
+id: T1
+requirements: R1
+seams: user-api
+fixtures: tests/fixtures/user.json
+conformance: conformance_check
+allowed_files: src/calc.py, tests/test_calc.py
+context_files: .ai/PLAN.md, services/user.py
+verify: "{sys.executable}" -m unittest discover -s tests -t . -q
+
+## Goal
+Use registered fixture and passing conformance command.
+## Constraints
+None.
+## Do not
+None.
+## Definition of done
+Done.
+"""
+            p.write(".ai/tasks/T1.md", card)
+            p.osr("approve-plan", "--by", "human")
+            p.osr("start", "T1")
+            p.write("src/calc.py", "import json\ndef load_data(): return json.load(open('tests/fixtures/user.json'))\n")
+            p.write("tests/test_calc.py", """import unittest
+from src.calc import load_data
+
+class TestCalc(unittest.TestCase):
+    def test_load(self):
+        data = load_data()
+        self.assertEqual(data["name"], "Alice")
+""")
+            code, out = p.osr("verify", "T1")
+            self.assertEqual(code, 0, out)
+            self.assertIn("VERIFY: PASS", out)
         finally:
             p.cleanup()
 

@@ -265,8 +265,57 @@ def eval_self_confirming_mock():
     p = EvalProject()
     try:
         p.setup_ready()
+        plan_with_seam = """# Plan
+
+## Goal
+Implement calculator additions with user service.
+
+## Non-goals
+Advanced mathematics.
+
+## Requirements
+- R1: Addition function
+  - AC: add(2, 3) returns 5 [test_add]
+  - Check: auto
+
+## Seams
+| seam id | consumer | provider | authoritative source | how it is checked |
+|---|---|---|---|---|
+| user_service | calc | user-service | services/upstream_user.py | contract-test |
+
+## Assumptions
+- [x] Python 3 only
+
+## Open questions
+"""
+        p.write(".ai/PLAN.md", plan_with_seam)
         p.write("services/__init__.py", "")
         p.write("services/upstream_user.py", '"""Upstream authoritative user service."""\ndef fetch_user(uid):\n    return {"user_id": uid, "display_name": "Alice"}\n')
+        card = f"""# T1: User format
+id: T1
+requirements: R1
+seams: user_service
+allowed_files: src/calc.py, tests/test_calc.py
+context_files: .ai/PLAN.md, services/upstream_user.py
+verify: "{sys.executable}" -m unittest discover -s tests -t . -q
+
+## Goal
+Format user details.
+
+## Constraints
+- Python 3 standard library only.
+
+## Do not
+- Do not touch files outside allowed_files.
+
+## Definition of done
+- format_user passes test.
+"""
+        p.write(".ai/tasks/T1.md", card)
+        p.osr("approve-plan", "--by", "human")
+        code, out = p.osr("start", "T1")
+        if code != 0:
+            return False, "Failed to start: " + out
         p.write("src/calc.py", 'from services.upstream_user import fetch_user\n\ndef format_user(uid):\n    data = fetch_user(uid)\n    return f"{data[\'name\']}:{data[\'id\']}"\n')
         p.write("tests/test_calc.py", '''import unittest
 from unittest.mock import patch
@@ -278,21 +327,6 @@ class TestUserFormat(unittest.TestCase):
         mock_fetch.return_value = {"id": 101, "name": "Alice"}
         self.assertEqual(calc.format_user(101), "Alice:101")
 ''')
-        card = f"""# T1: User format
-id: T1
-requirements: R1
-seams: user_service
-allowed_files: src/calc.py, tests/test_calc.py
-context_files: .ai/PLAN.md, services/upstream_user.py
-verify: "{sys.executable}" -m unittest discover -s tests -t . -q
-
-## Goal
-Format user details.
-"""
-        p.write(".ai/tasks/T1.md", card)
-        code, _ = p.osr("start", "T1")
-        if code != 0:
-            return False, "Failed to start"
         code, out = p.osr("verify", "T1")
         detected = (code != 0) and ("unanchored-mock" in out.lower() or "fixture" in out.lower() or "seam" in out.lower())
         return detected, "Self-confirming mock caught: " + ("yes" if detected else "no (known miss in v0.2)")
@@ -422,11 +456,11 @@ def run_adversarial_benchmark():
         ("V6", "ledger_tampering", "Audit Tampering", "Altered hash chain in ledger.jsonl", eval_ledger_tampering),
         ("V7", "config_tampering", "Trust Model Bypass", "Config altered after plan approval", eval_config_tampering),
         ("V8", "unconfirmed_command", "Gate Bypass", "Execution of unconfirmed global command", eval_unconfirmed_command),
+        ("V9", "self_confirming_mock", "Mock Verification", "Test mock returns fields not in upstream source", eval_self_confirming_mock),
         ("V10", "seam_field_mismatch", "Cross-Repo Seams", "Consumer card missing seam source in context_files", eval_seam_field_mismatch),
     ]
 
     known_miss_evaluators = [
-        ("V9", "self_confirming_mock", "Mock Verification", "Test mock returns fields not in upstream source", eval_self_confirming_mock),
         ("V11", "tautological_assertion", "Assertion Integrity", "Tautological assert 1 == 1 replaces real assertion", eval_tautological_assertion),
         ("V12", "weak_verify_command", "Verification Rigor", "Verify command matches zero tests or trivial pass", eval_weak_verify_command),
     ]

@@ -52,7 +52,7 @@ DEFAULT_CFG = {
     "require_distinct_reviewer": False,
     "allow_no_commands": False,
     "allow_broad_scope": False,
-    "human_only_flags": ["tests-weakened", "skips-added", "secret"],
+    "human_only_flags": ["tests-weakened", "skips-added", "secret", "unanchored-mock"],
     "env_smoke": ["build", "typecheck", "lint"],
     "ignore": [
         ".git", ".ai", "node_modules", "__pycache__", ".pytest_cache", ".mypy_cache",
@@ -249,8 +249,10 @@ def check_approval_secret(cfg, a):
 def load_state():
     p = ai("state.json")
     if not p.exists():
-        return {"plan_hash": None, "config_hash": None, "tasks": {}, "waivers": [], "signoffs": {}}
-    return json.loads(p.read_text(encoding="utf-8"))
+        return {"plan_hash": None, "config_hash": None, "tasks": {}, "waivers": [], "signoffs": {}, "fixtures": {}}
+    st = json.loads(p.read_text(encoding="utf-8"))
+    st.setdefault("fixtures", {})
+    return st
 
 
 def save_state(st):
@@ -533,8 +535,8 @@ def parse_plan():
     return Plan(reqs, seams), errs
 
 
-CARD_KEYS = ["id", "requirements", "depends_on", "allowed_files", "forbidden_files", "context_files", "verify", "seams"]
-CARD_LIST_KEYS = ["requirements", "depends_on", "allowed_files", "forbidden_files", "context_files", "seams"]
+CARD_KEYS = ["id", "requirements", "depends_on", "allowed_files", "forbidden_files", "context_files", "verify", "seams", "fixtures", "conformance"]
+CARD_LIST_KEYS = ["requirements", "depends_on", "allowed_files", "forbidden_files", "context_files", "seams", "fixtures", "conformance"]
 CARD_HEADINGS = ["goal", "constraints", "do not", "definition of done"]
 
 
@@ -626,6 +628,15 @@ def validate_card(tid, cfg, plan, strict_files=True):
             errs.append("%s: verify command '%s' cannot prove anything" % (tid, v))
         elif not is_verify_cmd_confirmed(v, cfg):
             errs.append("%s: verify command '%s' is not confirmed (must match a confirmed command in .ai/config.json)" % (tid, v))
+    for v in c.get("conformance", []):
+        if v in cfg.get("commands", {}):
+            if not confirmed(cfg, None, v):
+                errs.append("%s: conformance command '%s' is not confirmed (must run: osr confirm-commands)" % (tid, v))
+        else:
+            if TRIVIAL_CMD.match(v):
+                errs.append("%s: conformance command '%s' cannot prove anything" % (tid, v))
+            elif not is_verify_cmd_confirmed(v, cfg):
+                errs.append("%s: conformance command '%s' is not confirmed (must match a confirmed command in .ai/config.json)" % (tid, v))
     for h in CARD_HEADINGS:
         if h not in c["_heads"]:
             errs.append("%s: section '## %s' missing" % (tid, h.title()))
@@ -710,6 +721,8 @@ def run_recorded(cmd, cfg, label):
 
 
 def confirmed(cfg, led, name):
+    if led is None:
+        led = Ledger()
     c = cfg["commands"].get(name)
     if not c or not c.get("verified"):
         return False
@@ -876,7 +889,30 @@ def run_check(cfg, st, tid, card, snap, cur):
                 flags.append(("tests-weakened:%s:%d->%d" % (p, old.get("asserts", 0), new.get("asserts", 0)), "assertion count decreased"))
             if new.get("skips", 0) > old.get("skips", 0):
                 flags.append(("skips-added:%s" % p, "skip/only/xfail marker added"))
+
+    # Heuristic gate: unanchored-mock on cards declaring seams
+    if card.get("seams"):
+        registered_fixtures = set()
+        for f in card.get("fixtures", []):
+            registered_fixtures.add(Path(f).name)
+            registered_fixtures.add(Path(f).as_posix())
+        mock_pat = re.compile(r"(jest\.mock|vi\.mock|msw|nock|unittest\.mock|@patch|patch\(|patch\.object|responses\.|Mock\(|MagicMock\()", re.I)
+        for p, s in sorted(ch.items()):
+            if s != "D" and cur.get(p, {}).get("test"):
+                test_fp = ROOT / p
+                if test_fp.is_file():
+                    content = test_fp.read_text(encoding="utf-8", errors="replace")
+                    if mock_pat.search(content):
+                        anchored = False
+                        for fix in registered_fixtures:
+                            if fix and fix in content:
+                                anchored = True
+                                break
+                        if not anchored:
+                            flags.append(("unanchored-mock:%s" % p, "test uses mock constructs on seam card without loading registered fixture"))
+
     waived = {w["flag"] for w in st["waivers"] if w["task"] == tid}
+    is_waived = lambda f: f in waived or f.split(":")[0] in waived
     checker_errors = []
     for c in cfg.get("checkers", []):
         c_name = c.get("name", "checker")
@@ -915,12 +951,12 @@ def run_check(cfg, st, tid, card, snap, cur):
             flags.append(("checker-error:%s" % c_name, str(ex)))
             checker_errors.append("%s: exception %s" % (c_name, ex))
 
-    unwaived = [(f, m) for f, m in flags if f not in waived]
+    unwaived = [(f, m) for f, m in flags if not is_waived(f)]
     refs = check_refs(ch)
     ok = not viol and not unwaived and not refs["unresolved"] and not refs["syntax"] and not checker_errors
     return {
         "ok": ok, "fp": fp, "changed": ch, "violations": viol, "flags": [f for f, _ in flags],
-        "unwaived": unwaived, "waived": sorted(f for f, _ in flags if f in waived), "refs": refs,
+        "unwaived": unwaived, "waived": sorted(f for f, _ in flags if is_waived(f)), "refs": refs,
         "checker_errors": checker_errors,
     }
 
@@ -1494,6 +1530,25 @@ def cmd_verify(a):
     card, errs = validate_card(tid, cfg, parse_plan()[0])
     if errs:
         die("Task card invalid:\n  " + "\n  ".join(errs))
+
+    # Fixture registration and hash integrity check
+    for fix in card.get("fixtures", []):
+        fix_fp = ROOT / fix
+        try:
+            norm_fix = fix_fp.relative_to(ROOT).as_posix() if fix_fp.is_file() else Path(fix).as_posix()
+        except Exception:
+            norm_fix = fix.replace("\\", "/")
+        reg = st.get("fixtures", {}).get(norm_fix)
+        if not reg:
+            die("Fixture '%s' is not registered. Register it with: osr fixture-add %s --seam <id> --source \"...\"" % (fix, fix))
+        if not fix_fp.is_file():
+            die("Fixture file '%s' does not exist." % fix)
+        cur_h = hashlib.sha256(fix_fp.read_bytes()).hexdigest()
+        if cur_h != reg.get("sha256"):
+            die("Fixture hash mismatch for '%s' (registered: %s, current: %s). Re-register with: osr fixture-add %s --seam %s --source \"...\"" % (
+                fix, reg.get("sha256"), cur_h, fix, reg.get("seam", "seam_id")
+            ))
+
     snap = load_snap(tid)
     r = run_check(cfg, st, tid, card, snap, walk_tree(cfg))
     if not JSON_MODE:
@@ -1516,6 +1571,7 @@ def cmd_verify(a):
             }, code=2)
         print("VERIFY: FAIL (static checks failed; commands not run). Failures this attempt: %d/%d" % (ts["failures"], cfg["max_inner_failures"]))
         sys.exit(2)
+
     cmds = []
     for n in cfg["global_verify"]:
         if n not in cfg["commands"]:
@@ -1524,6 +1580,15 @@ def cmd_verify(a):
             die("Global command '%s' is not confirmed. Run: osr confirm-commands" % n)
         cmds.append((n, cfg["commands"][n]["cmd"]))
     cmds += [("task", v) for v in card["verify"]]
+    for v in card.get("conformance", []):
+        if v in cfg.get("commands", {}):
+            if not confirmed(cfg, led, v):
+                die("Conformance command '%s' is not confirmed. Run: osr confirm-commands" % v)
+            cmds.append(("conformance", cfg["commands"][v]["cmd"]))
+        else:
+            if not is_verify_cmd_confirmed(v, cfg, led):
+                die("Conformance command '%s' is not confirmed. Run: osr confirm-commands" % v)
+            cmds.append(("conformance", v))
     results, ok = [], True
     for n, cmd in cmds:
         res = run_recorded(cmd, cfg, "%s-%s" % (tid, n))
@@ -1691,6 +1756,10 @@ def cmd_unblock(a):
 
 def cmd_waive(a):
     cfg, st, led = ctx()
+    flag = a.flag or getattr(a, "flag_pos", None)
+    if not flag:
+        die("Flag is required (either as positional argument or --flag).")
+    a.flag = flag
     ts = task_state(st, a.task)
     if len(a.reason) < 15:
         die("A waiver needs a real reason (15+ chars).")
@@ -1703,6 +1772,31 @@ def cmd_waive(a):
     save_state(st)
     led.append("waive", a.task, ts["attempts"], flag=a.flag, reason=a.reason, approved_by=a.approved_by)
     print("Waiver recorded (visible in the final audit).")
+
+
+def cmd_fixture_add(a):
+    cfg, st, led = ctx()
+    fp = ROOT / a.path
+    if not fp.is_file():
+        die("Fixture file '%s' does not exist." % a.path)
+    try:
+        rel_path = fp.relative_to(ROOT).as_posix()
+    except Exception:
+        rel_path = a.path.replace("\\", "/")
+    content = fp.read_bytes()
+    h = hashlib.sha256(content).hexdigest()
+    st.setdefault("fixtures", {})
+    st["fixtures"][rel_path] = {
+        "sha256": h,
+        "seam": a.seam,
+        "source": a.source,
+        "date": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    }
+    save_state(st)
+    led.append("fixture_add", path=rel_path, seam=a.seam, source=a.source, sha256=h)
+    if JSON_MODE:
+        emit_json({"ok": True, "exit_code": 0, "status": "ok", "path": rel_path, "seam": a.seam, "sha256": h}, code=0)
+    print("Fixture registered: %s (seam: %s, sha256: %s)" % (rel_path, a.seam, h))
 
 
 def cmd_signoff(a):
@@ -2035,9 +2129,14 @@ def main():
     p.add_argument("--note", required=True)
     p.add_argument("--extra-attempts", type=int, default=0)
     p.add_argument("--secret", default=None, help="approval secret (or set OSR_APPROVAL_SECRET)")
+    p = add("fixture-add", cmd_fixture_add, help="register a captured seam fixture")
+    p.add_argument("path", help="path to fixture file")
+    p.add_argument("--seam", required=True, help="seam id this fixture belongs to")
+    p.add_argument("--source", required=True, help="source note of where fixture was captured")
     p = add("waive", cmd_waive, help="record a justified bypass of a check flag")
     p.add_argument("task")
-    p.add_argument("--flag", required=True)
+    p.add_argument("flag_pos", nargs="?", default=None, help="check flag to waive (positional)")
+    p.add_argument("--flag", default=None, help="check flag to waive")
     p.add_argument("--reason", required=True)
     p.add_argument("--approved-by", default=None)
     p.add_argument("--secret", default=None, help="approval secret (or set OSR_APPROVAL_SECRET)")
