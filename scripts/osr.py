@@ -126,6 +126,12 @@ def sha_text(s):
     return hashlib.sha256(s.encode("utf-8", "replace")).hexdigest()
 
 
+def join_arg(val):
+    if isinstance(val, (list, tuple)):
+        return " ".join(val)
+    return str(val) if val is not None else ""
+
+
 def die(msg, code=1):
     print(msg, file=sys.stderr)
     sys.exit(code)
@@ -1049,8 +1055,9 @@ def cmd_approve(a):
     h = sha_text(ai("PLAN.md").read_text(encoding="utf-8"))
     st["plan_hash"] = h
     save_state(st)
-    led.append("plan_approved", by=a.by, plan_hash=h)
-    print("Plan approved by %s. Any later edit to PLAN.md voids approval until re-approved." % a.by)
+    by_val = join_arg(a.by)
+    led.append("plan_approved", by=by_val, plan_hash=h)
+    print("Plan approved by %s. Any later edit to PLAN.md voids approval until re-approved." % by_val)
 
 
 def cmd_task_check(a):
@@ -1279,8 +1286,9 @@ def cmd_unblock(a):
     ts["blocked"] = None
     ts["extra_attempts"] += a.extra_attempts
     save_state(st)
-    led.append("unblock", a.task, ts["attempts"], by=a.by, note=a.note, extra_attempts=a.extra_attempts)
-    print("Unblocked %s by %s." % (a.task, a.by))
+    by_val = join_arg(a.by)
+    led.append("unblock", a.task, ts["attempts"], by=by_val, note=a.note, extra_attempts=a.extra_attempts)
+    print("Unblocked %s by %s." % (a.task, by_val))
 
 
 def cmd_waive(a):
@@ -1302,10 +1310,11 @@ def cmd_signoff(a):
     plan, _ = parse_plan()
     if not plan or a.req not in plan:
         die("Unknown requirement %s" % a.req)
-    st["signoffs"][a.req] = {"by": a.by, "note": a.note, "ts": now()}
+    by_val = join_arg(a.by)
+    st["signoffs"][a.req] = {"by": by_val, "note": a.note, "ts": now()}
     save_state(st)
-    led.append("signoff", None, None, req=a.req, by=a.by, note=a.note)
-    print("%s signed off by %s." % (a.req, a.by))
+    led.append("signoff", None, None, req=a.req, by=by_val, note=a.note)
+    print("%s signed off by %s." % (a.req, by_val))
 
 
 def cmd_reset(a):
@@ -1314,7 +1323,8 @@ def cmd_reset(a):
     if snap_path(a.task).exists():
         snap_path(a.task).unlink()
     save_state(st)
-    led.append("reset", a.task, None, by=a.by, reason=a.reason)
+    by_val = join_arg(a.by)
+    led.append("reset", a.task, None, by=by_val, reason=a.reason)
     print("Task %s reset (history stays in the ledger)." % a.task)
 
 
@@ -1435,7 +1445,7 @@ def main():
     add("env-check", cmd_env_check, help="re-run smoke commands after an environment fix")
     add("plan-check", cmd_plan_check, help="validate PLAN.md")
     p = add("approve-plan", cmd_approve, help="HUMAN ONLY: approve the current PLAN.md")
-    p.add_argument("--by", required=True)
+    p.add_argument("--by", nargs="+", required=True)
     p = add("task-check", cmd_task_check, help="validate task cards")
     p.add_argument("task", nargs="?")
     p.add_argument("--all", action="store_true")
@@ -1459,7 +1469,7 @@ def main():
     p.add_argument("--change", required=True)
     p = add("unblock", cmd_unblock, help="HUMAN ONLY: clear a block or grant extra attempts")
     p.add_argument("task")
-    p.add_argument("--by", required=True)
+    p.add_argument("--by", nargs="+", required=True)
     p.add_argument("--note", required=True)
     p.add_argument("--extra-attempts", type=int, default=0)
     p = add("waive", cmd_waive, help="record a justified bypass of a check flag")
@@ -1469,11 +1479,11 @@ def main():
     p.add_argument("--approved-by", default=None)
     p = add("signoff", cmd_signoff, help="HUMAN ONLY: sign off a manual or unverifiable requirement")
     p.add_argument("req")
-    p.add_argument("--by", required=True)
+    p.add_argument("--by", nargs="+", required=True)
     p.add_argument("--note", default="")
     p = add("reset", cmd_reset, help="HUMAN ONLY: reset a task (e.g. after a plan change)")
     p.add_argument("task")
-    p.add_argument("--by", required=True)
+    p.add_argument("--by", nargs="+", required=True)
     p.add_argument("--reason", required=True)
     add("coverage", cmd_coverage, help="requirement to task to evidence matrix")
     add("audit", cmd_audit, help="final traceability audit (writes .ai/AUDIT.md)")
