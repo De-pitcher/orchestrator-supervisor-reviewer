@@ -118,6 +118,13 @@ class Project:
         self.write("src/calc.py", GOOD_CODE)
         self.write("tests/test_calc.py", GOOD_TEST)
 
+    def git_init(self):
+        subprocess.run(["git", "init"], cwd=str(self.dir), capture_output=True)
+        subprocess.run(["git", "config", "user.name", "Test"], cwd=str(self.dir), capture_output=True)
+        subprocess.run(["git", "config", "user.email", "test@test.com"], cwd=str(self.dir), capture_output=True)
+        subprocess.run(["git", "add", "."], cwd=str(self.dir), capture_output=True)
+        subprocess.run(["git", "commit", "-m", "init"], cwd=str(self.dir), capture_output=True)
+
     def cleanup(self):
         shutil.rmtree(self.dir, ignore_errors=True)
 
@@ -520,6 +527,42 @@ class OsrTests(unittest.TestCase):
         p.write(".ai/ledger.jsonl", "corrupted json line\n")
         res = subprocess.run([sys.executable, str(pre_commit_script)], capture_output=True, text=True, cwd=str(p.dir))
         self.assertNotEqual(res.returncode, 0)
+
+    def test_review_pack_bundles_diff_card_criteria_without_builder_logs(self):
+        p = self.p
+        p.setup_ready()
+        p.osr("start", "T1", "--model", "secret-builder-model-v99")
+        p.implement()
+        p.osr("verify", "T1")
+        code, out = p.osr("review-pack", "T1")
+        self.assertEqual(code, 0, out)
+        self.assertIn("R1", out)
+        self.assertIn("add(2,3)", out)
+        self.assertIn("diff", out.lower())
+        self.assertNotIn("secret-builder-model-v99", out)
+
+    def test_quick_path_verifies_without_task_cards(self):
+        p = self.p
+        p.setup_ready()
+        p.git_init()
+        p.write("src/calc.py", GOOD_CODE)
+        p.write("tests/test_calc.py", GOOD_TEST)
+        cmd = f'"{sys.executable}" -m unittest tests.test_calc -q'
+        code, out = p.osr("quick", "--verify", cmd, "--allowed", "src/calc.py, tests/test_calc.py")
+        self.assertEqual(code, 0, out)
+        self.assertIn("PASS", out)
+
+    def test_quick_path_rejects_scope_violation(self):
+        p = self.p
+        p.setup_ready()
+        p.git_init()
+        p.write("src/calc.py", GOOD_CODE)
+        p.write("src/unauthorized.py", "# out of scope\n")
+        cmd = f'"{sys.executable}" -m unittest discover -s tests -q'
+        code, out = p.osr("quick", "--verify", cmd, "--allowed", "src/calc.py")
+        self.assertNotEqual(code, 0)
+        self.assertIn("scope", out.lower())
+
 
 
 

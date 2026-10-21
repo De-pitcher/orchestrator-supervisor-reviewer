@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import ast
+import difflib
 import fnmatch
 import hashlib
 import importlib.util
@@ -32,6 +33,12 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 ASSETS = SCRIPT_DIR.parent / "assets"
 ZERO = "0" * 64
 LAYERS = ["spec", "plan", "prompt", "context", "environment", "model", "implementation"]
+
+EXIT_OK = 0
+EXIT_USER_ERR = 1
+EXIT_GATE_FAIL = 2
+EXIT_BLOCKED = 3
+EXIT_INTEGRITY = 4
 
 DEFAULT_CFG = {
     "version": 1,
@@ -1743,6 +1750,118 @@ def cmd_ledger_verify(a):
     sys.exit(0 if ok else 4)
 
 
+def cmd_review_pack(a):
+    cfg, st, led = ctx()
+    tid = a.task
+    plan, perrs = parse_plan()
+    card, errs = validate_card(tid, cfg, plan)
+    if errs:
+        die("Task card invalid:\n  " + "\n  ".join(errs))
+
+    snap = load_snap(tid)
+    cur = walk_tree(cfg)
+    diff_map = diff_tree(snap, cur)
+
+    diff_lines = []
+    res = subprocess.run(["git", "diff"], capture_output=True, text=True, cwd=str(ROOT))
+    if res.returncode == 0 and res.stdout.strip():
+        diff_lines.append(res.stdout.strip())
+
+    for path_str, status in sorted(diff_map.items()):
+        p = ROOT / path_str
+        if status == "A" and p.exists():
+            try:
+                content = p.read_text(encoding="utf-8", errors="replace")
+                diff_lines.append(f"diff --git a/{path_str} b/{path_str}\nnew file mode 100644\n--- /dev/null\n+++ b/{path_str}\n" + "\n".join("+" + l for l in content.splitlines()))
+            except Exception:
+                diff_lines.append(f"diff --git a/{path_str} b/{path_str} (new file)")
+        elif status == "D":
+            diff_lines.append(f"diff --git a/{path_str} b/{path_str}\ndeleted file mode 100644\n--- a/{path_str}\n+++ /dev/null")
+        elif status == "M" and (res.returncode != 0 or not res.stdout.strip()) and p.exists():
+            try:
+                content = p.read_text(encoding="utf-8", errors="replace")
+                diff_lines.append(f"diff --git a/{path_str} b/{path_str}\n" + content)
+            except Exception:
+                diff_lines.append(f"diff --git a/{path_str} b/{path_str} (modified)")
+
+    diff_content = "\n\n".join(diff_lines) if diff_lines else "(No diff)"
+
+    req_lines = []
+    for r in card.get("requirements", []):
+        rinfo = plan.get(r, {})
+        req_lines.append(f"- **{r}**: {rinfo.get('title', '')}")
+        for ac in rinfo.get("ac", []):
+            req_lines.append(f"  - AC: {ac}")
+
+    card_path = ai("tasks", f"{tid}.md")
+    card_raw = card_path.read_text(encoding="utf-8") if card_path.exists() else ""
+
+    pack_sections = [
+        f"# Review Pack: {tid}",
+        "",
+        "## Acceptance Criteria",
+        "\n".join(req_lines) if req_lines else "(None specified)",
+        "",
+        "## Task Specification",
+        card_raw,
+        "",
+        "## Code Diff",
+        "```diff",
+        diff_content,
+        "```",
+    ]
+    pack_text = "\n".join(pack_sections) + "\n"
+
+    if getattr(a, "out", None):
+        out_p = Path(a.out)
+        out_p.parent.mkdir(parents=True, exist_ok=True)
+        out_p.write_text(pack_text, encoding="utf-8")
+
+    if JSON_MODE:
+        emit_json({
+            "ok": True,
+            "exit_code": 0,
+            "status": "ok",
+            "task": tid,
+            "requirements": card.get("requirements", []),
+            "diff": diff_content,
+            "card": card_raw
+        }, code=0)
+    print(pack_text)
+
+
+def cmd_quick(a):
+    cfg, st, led = ctx(require_chain=False)
+    if a.allowed:
+        allowed_pats = [pt.strip() for pt in a.allowed.split(",") if pt.strip()]
+        res = subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True, cwd=str(ROOT))
+        if res.returncode == 0:
+            changed = []
+            for line in res.stdout.splitlines():
+                parts = line.strip().split(maxsplit=1)
+                if len(parts) == 2:
+                    changed.append(parts[1].replace("\\", "/").strip('"\''))
+        else:
+            cur = walk_tree(cfg)
+            changed = [f for f in cur.keys() if not f.startswith(".ai/")]
+
+        for f in changed:
+            if not matches(f, allowed_pats):
+                die("Scope violation: file '%s' is outside allowed files (%s)" % (f, a.allowed), code=EXIT_USER_ERR)
+
+    res = run_recorded(a.verify, cfg, "quick")
+    if not res["ok"]:
+        if JSON_MODE:
+            emit_json({"ok": False, "exit_code": 2, "status": "gate_failed", "cmd": a.verify, "log": res.get("log")}, code=2)
+        print("QUICK VERIFY: FAIL")
+        sys.exit(2)
+
+    led.append("quick_verify", cmd=a.verify, allowed=a.allowed, ok=True)
+    if JSON_MODE:
+        emit_json({"ok": True, "exit_code": 0, "status": "ok", "cmd": a.verify, "allowed": a.allowed}, code=0)
+    print("QUICK VERIFY: PASS")
+
+
 def main():
     global ROOT, JSON_MODE
     common = argparse.ArgumentParser(add_help=False)
@@ -1823,6 +1942,12 @@ def main():
     p.add_argument("--file", default=None, help="custom anchor file path (default: .osr-anchor)")
     p = add("ledger-verify", cmd_ledger_verify, help="check ledger integrity")
     p.add_argument("--anchor", default=None, help="custom anchor file path to verify against")
+    p = add("review-pack", cmd_review_pack, help="bundle diff, task card, and criteria without builder rationale")
+    p.add_argument("task")
+    p.add_argument("--out", default=None, help="write pack to output file")
+    p = add("quick", cmd_quick, help="rapid verification path without task card ceremony")
+    p.add_argument("--verify", required=True, help="verification command to run")
+    p.add_argument("--allowed", default=None, help="comma-separated list of allowed file patterns")
 
     a = ap.parse_args()
     if a.root:
