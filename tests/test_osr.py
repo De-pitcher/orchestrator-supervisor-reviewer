@@ -1377,6 +1377,165 @@ VERDICT: PASS
         finally:
             p.cleanup()
 
+    def test_review_pack_includes_adversarial_prompt_seams_and_authoritative_sources(self):
+        p = Project()
+        try:
+            p.osr("init")
+            cfg = json.loads(p.read(".ai/config.json"))
+            cfg["commands"] = {"test": {"cmd": f'"{sys.executable}" -m unittest discover -s tests -t . -q', "verified": False}}
+            cfg["global_verify"] = ["test"]
+            p.write(".ai/config.json", json.dumps(cfg))
+            p.osr("confirm-commands")
+
+            plan_text = """# Plan
+## Goal
+Review pack testing.
+## Non-goals
+None.
+## Requirements
+- R1: User interface
+  - AC: connects to authoritative user service [test_user]
+  - Check: auto
+## Seams
+| seam id | consumer | provider | authoritative source | how it is checked |
+|---|---|---|---|---|
+| user-api | client | service | services/user.py | contract-test |
+## Assumptions
+- [x] Python 3 only
+## Open questions
+"""
+            p.write(".ai/PLAN.md", plan_text)
+            p.write("services/user.py", 'def fetch_user_data(user_id):\n    """Authoritative user schema."""\n    return {"user_id": user_id, "name": "Alice"}\n')
+
+            card = f"""# T1: User client
+id: T1
+requirements: R1
+seams: user-api
+negative_tests: test_user_negative
+allowed_files: src/client.py, tests/test_client.py
+context_files: .ai/PLAN.md, services/user.py
+verify: "{sys.executable}" -m unittest discover -s tests -t . -q
+
+## Goal
+Implement client.
+## Constraints
+None.
+## Do not
+None.
+## Definition of done
+Done.
+"""
+            p.write(".ai/tasks/T1.md", card)
+            p.osr("approve-plan", "--by", "human")
+            p.osr("start", "T1", "--model", "secret-builder-model-xyz")
+            p.write("src/client.py", "def get_name(): return 'Alice'\n")
+            p.write("tests/test_client.py", "import unittest\nclass C(unittest.TestCase):\n    def test_user(self): self.assertTrue(True)\n    def test_user_negative(self): self.assertTrue(True)\n")
+            p.osr("verify", "T1")
+
+            code, out = p.osr("review-pack", "T1")
+            self.assertEqual(code, 0, out)
+            # Must include adversarial prompt:
+            self.assertIn("For every external field, find its definition in the provided source", out)
+            self.assertIn("Do not trust the builder's explanation", out)
+            # Must include seams and excerpted authoritative source:
+            self.assertIn("user-api", out)
+            self.assertIn("services/user.py", out)
+            self.assertIn("def fetch_user_data(user_id):", out)
+            # Must contain no builder reasoning/model names:
+            self.assertNotIn("secret-builder-model-xyz", out)
+        finally:
+            p.cleanup()
+
+    def test_manual_check_requirement_shows_unverified_until_signoff_audit_exit_2(self):
+        p = Project()
+        try:
+            p.osr("init")
+            cfg = json.loads(p.read(".ai/config.json"))
+            cfg["commands"] = {"test": {"cmd": f'"{sys.executable}" -m unittest discover -s tests -t . -q', "verified": False}}
+            cfg["global_verify"] = ["test"]
+            p.write(".ai/config.json", json.dumps(cfg))
+            p.osr("confirm-commands")
+
+            plan_text = """# Plan
+## Goal
+Manual testing.
+## Non-goals
+None.
+## Requirements
+- R1: Automated calculation logic
+  - AC: calculation returns correct sum [test_calc]
+  - Check: auto
+- R2: WebSocket wire protocol timing
+  - AC: wire timing validated against real server with script
+  - Check: manual
+  - Script: scripts/test_wire.py
+## Assumptions
+- [x] Python 3 only
+## Open questions
+"""
+            p.write(".ai/PLAN.md", plan_text)
+            p.write("scripts/test_wire.py", "# Manual wire timing verification script\nprint('Wire ok')\n")
+
+            card = f"""# T1: Calc task
+id: T1
+requirements: R1
+allowed_files: src/calc.py, tests/test_calc.py
+context_files: .ai/PLAN.md
+verify: "{sys.executable}" -m unittest discover -s tests -t . -v
+
+## Goal
+Implement calc.
+## Constraints
+None.
+## Do not
+None.
+## Definition of done
+Done.
+"""
+            p.write(".ai/tasks/T1.md", card)
+            p.osr("approve-plan", "--by", "human")
+            p.osr("start", "T1")
+            p.write("src/calc.py", "def add(a, b): return a + b\n")
+            p.write("tests/test_calc.py", "import unittest\nfrom src.calc import add\nclass C(unittest.TestCase):\n    def test_calc(self): self.assertEqual(add(1, 2), 3)\n")
+            p.osr("verify", "T1")
+            p.write(".ai/reviews/T1.spec.md", 'R1: PASS @ src/calc.py:1 "def add(a, b): return a + b"\n\nVERDICT: PASS\n')
+            p.osr("review", "T1", "spec", "--reviewer", "peer")
+            p.write(".ai/reviews/T1.quality.md", """C1: PASS - checked all imports and declared dependencies in package
+C2: PASS - handled empty input and None cases thoroughly
+C3: NA - no network or filesystem operations performed
+C4: PASS - no TODOs, stubs, or placeholder comments
+C5: PASS - unchanged caller signatures verified across modules
+C6: PASS - tests pass with all assertions intact and verified
+C7: PASS - matches existing codebase style and conventions
+C8: PASS - within allowed_files scope without extra changes
+
+BREAK_ATTEMPTS:
+- Attempt 1: send unexpected payload with extra fields to consumer
+- Attempt 2: send empty JSON object to simulate missing fields
+- Attempt 3: return null payload to test parser error handling
+
+VERDICT: PASS
+""")
+            p.osr("review", "T1", "quality", "--reviewer", "peer")
+            p.osr("done", "T1")
+
+            # 1. Audit before signoff must report UNVERIFIED and exit 2
+            code, out = p.osr("audit")
+            self.assertEqual(code, 2, out)
+            self.assertIn("UNVERIFIED", out)
+            self.assertIn("scripts/test_wire.py", out)
+
+            # 2. Signoff manual requirement
+            code, out = p.osr("signoff", "R2", "--by", "human", "--note", "Executed scripts/test_wire.py on local server")
+            self.assertEqual(code, 0, out)
+
+            # 3. Audit after signoff reports HUMAN-SIGNED and exits 0
+            code, out = p.osr("audit")
+            self.assertEqual(code, 0, out)
+            self.assertIn("HUMAN-SIGNED", out)
+        finally:
+            p.cleanup()
+
 
 
 

@@ -498,6 +498,9 @@ def parse_plan():
             m = re.match(r"^\s+[-*]\s*Check\s*:\s*(\w+)", ln)
             if m:
                 reqs[cur_r]["check"] = m.group(1).lower()
+            m = re.match(r"^\s+[-*]\s*Script\s*:\s*(.+)$", ln)
+            if m:
+                reqs[cur_r]["script"] = m.group(1).strip()
     if not reqs:
         errs.append("PLAN.md: no requirements found (format: '- R1: text' then indented '- AC:' and '- Check: auto|manual')")
     for r, v in reqs.items():
@@ -507,6 +510,10 @@ def parse_plan():
             errs.append("PLAN.md: %s has an acceptance criterion shorter than 15 chars (be concrete and testable)" % r)
         if v["check"] not in ("auto", "manual"):
             errs.append("PLAN.md: %s needs '- Check: auto' or '- Check: manual'" % r)
+        if v["check"] == "manual" and v.get("script"):
+            sp = ROOT / v["script"]
+            if not sp.exists():
+                errs.append("PLAN.md: %s references script '%s' which does not exist" % (r, v["script"]))
     for key, lines in sections.items():
         if "open question" in key or "assumption" in key:
             for ln in lines:
@@ -1872,7 +1879,13 @@ def requirement_rows(cfg, st, led, plan):
     for r, v in plan.items():
         tasks = [t for t in ids if r in cards[t]["requirements"]]
         status, ev = "UNCOVERED", ""
-        if tasks:
+        if v.get("check") == "manual":
+            if r in st.get("signoffs", {}):
+                status, ev = "HUMAN-SIGNED", st["signoffs"][r]["by"]
+            else:
+                status = "PENDING-HUMAN (UNVERIFIED)"
+                ev = v.get("script") or "manual test script required"
+        elif tasks:
             if any(task_state(st, t)["status"] != "done" for t in tasks):
                 status = "INCOMPLETE"
             else:
@@ -1891,7 +1904,7 @@ def requirement_rows(cfg, st, led, plan):
                             test_tags.append(m.group(1))
                     if test_tags:
                         ev += " (tests: %s)" % ", ".join(test_tags)
-                elif r in st["signoffs"]:
+                elif r in st.get("signoffs", {}):
                     status, ev = "HUMAN-SIGNED", st["signoffs"][r]["by"]
                 else:
                     status = "PENDING-HUMAN"
@@ -1939,7 +1952,7 @@ def cmd_audit(a):
     ai("AUDIT.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
     print("\n".join(lines))
     bad = [r for r in rows if r[4] in ("UNCOVERED", "INCOMPLETE")] or notdone or not plan_ok
-    pending = [r for r in rows if r[4] == "PENDING-HUMAN"]
+    pending = [r for r in rows if "PENDING-HUMAN" in r[4] or "UNVERIFIED" in r[4]]
     if bad:
         print("\nAUDIT: FAIL (gaps above)")
         sys.exit(1)
@@ -2048,8 +2061,39 @@ def cmd_review_pack(a):
     card_path = ai("tasks", f"{tid}.md")
     card_raw = card_path.read_text(encoding="utf-8") if card_path.exists() else ""
 
+    adversarial_prompt = (
+        "> **Adversarial Review Directive**:\n"
+        "> For every external field, find its definition in the provided source. "
+        "Report any field the code uses that the source does not declare. "
+        "Do not trust the builder's explanation."
+    )
+
+    seam_sections = []
+    declared_seams = card.get("seams", [])
+    if declared_seams and plan and getattr(plan, "seams", None):
+        seam_sections.append("## Declared Seams")
+        seam_sections.append("| seam id | consumer | provider | authoritative source | how it is checked |")
+        seam_sections.append("|---|---|---|---|---|")
+        for s in declared_seams:
+            sinfo = plan.seams.get(s, {})
+            seam_sections.append("| %s | %s | %s | %s | %s |" % (
+                s, sinfo.get("consumer", ""), sinfo.get("provider", ""), sinfo.get("source", ""), sinfo.get("how", "")
+            ))
+        seam_sections.append("")
+        seam_sections.append("## Authoritative Upstream Sources")
+        for s in declared_seams:
+            sinfo = plan.seams.get(s, {})
+            src = sinfo.get("source", "").strip()
+            if src:
+                sp = ROOT / src
+                if sp.is_file():
+                    content = sp.read_text(encoding="utf-8", errors="replace")
+                    seam_sections.append(f"### {s} (`{src}`)\n```\n{content}\n```\n")
+
     pack_sections = [
         f"# Review Pack: {tid}",
+        "",
+        adversarial_prompt,
         "",
         "## Acceptance Criteria",
         "\n".join(req_lines) if req_lines else "(None specified)",
@@ -2057,6 +2101,10 @@ def cmd_review_pack(a):
         "## Task Specification",
         card_raw,
         "",
+    ]
+    if seam_sections:
+        pack_sections += seam_sections + [""]
+    pack_sections += [
         "## Code Diff",
         "```diff",
         diff_content,
