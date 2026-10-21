@@ -329,7 +329,7 @@ class TestUserFormat(unittest.TestCase):
 ''')
         code, out = p.osr("verify", "T1")
         detected = (code != 0) and ("unanchored-mock" in out.lower() or "fixture" in out.lower() or "seam" in out.lower())
-        return detected, "Self-confirming mock caught: " + ("yes" if detected else "no (known miss in v0.2)")
+        return detected, "Self-confirming mock caught: " + ("yes" if detected else "no")
     finally:
         p.cleanup()
 
@@ -377,7 +377,7 @@ Consumer task missing seam authoritative source in context_files.
         p.write(".ai/tasks/T1.md", card)
         code, out = p.osr("task-check", "T1")
         detected = (code != 0) and ("missing from context_files" in out or "context_files" in out.lower())
-        return detected, "Missing seam source in context_files caught: " + ("yes" if detected else "no (known miss in v0.2)")
+        return detected, "Missing seam source in context_files caught: " + ("yes" if detected else "no")
     finally:
         p.cleanup()
 
@@ -444,6 +444,202 @@ def eval_clean_honest_run():
         return clean_pass, "Clean run passed: " + ("yes" if clean_pass else out.strip())
     finally:
         p.cleanup()
+
+
+def eval_clean_fixture_runs():
+    """Run clean tasks across at least 10 realistic fixture projects to measure false-positive rate."""
+    fixtures = [
+        ("calc_math", "def add(a, b): return a + b\ndef sub(a, b): return a - b\n",
+         "import unittest\nfrom src.calc import add, sub\nclass MTest(unittest.TestCase):\n    def test_add(self): self.assertEqual(add(2, 3), 5)\n    def test_sub(self): self.assertEqual(sub(5, 2), 3)\n"),
+        ("string_utils", "def slugify(s): return '-'.join(s.lower().split())\n",
+         "import unittest\nfrom src.calc import slugify\nclass STest(unittest.TestCase):\n    def test_slug(self): self.assertEqual(slugify('OSR Workflow Tools'), 'osr-workflow-tools')\n"),
+        ("data_structure", "class Stack:\n    def __init__(self): self.items = []\n    def push(self, x): self.items.append(x)\n    def pop(self): return self.items.pop()\n",
+         "import unittest\nfrom src.calc import Stack\nclass StkTest(unittest.TestCase):\n    def test_stack(self):\n        s = Stack()\n        s.push(42)\n        self.assertEqual(s.pop(), 42)\n"),
+        ("json_transform", "def transform(data): return {'status': 'ok', 'result': data.get('val', 0) * 2}\n",
+         "import unittest\nfrom src.calc import transform\nclass JTest(unittest.TestCase):\n    def test_transform(self): self.assertEqual(transform({'val': 21}), {'status': 'ok', 'result': 42})\n"),
+        ("config_validation", "def validate_port(p): return isinstance(p, int) and 1 <= p <= 65535\n",
+         "import unittest\nfrom src.calc import validate_port\nclass CTest(unittest.TestCase):\n    def test_val(self): self.assertTrue(validate_port(8080))\n"),
+        ("binary_search", "def bsearch(arr, x):\n    l, r = 0, len(arr) - 1\n    while l <= r:\n        m = (l + r) // 2\n        if arr[m] == x: return m\n        elif arr[m] < x: l = m + 1\n        else: r = m - 1\n    return -1\n",
+         "import unittest\nfrom src.calc import bsearch\nclass BSTest(unittest.TestCase):\n    def test_bs(self): self.assertEqual(bsearch([10, 20, 30], 20), 1)\n"),
+        ("stream_pipeline", "def filter_evens(nums): return [x for x in nums if x % 2 == 0]\n",
+         "import unittest\nfrom src.calc import filter_evens\nclass PipeTest(unittest.TestCase):\n    def test_pipe(self): self.assertEqual(filter_evens([1, 2, 3, 4]), [2, 4])\n"),
+        ("dataclass_helper", "class Config:\n    def __init__(self, host, port): self.host, self.port = host, port\n",
+         "import unittest\nfrom src.calc import Config\nclass CfgTest(unittest.TestCase):\n    def test_cfg(self): c = Config('localhost', 8080); self.assertEqual(c.port, 8080)\n"),
+    ]
+
+    results = []
+    # 1-8: Standard clean fixtures
+    for name, code_str, test_str in fixtures:
+        p = EvalProject()
+        try:
+            p.setup_ready()
+            code, out = p.osr("start", "T1")
+            if code != 0:
+                results.append((name, False, "Failed to start: " + out))
+                continue
+            p.write("src/calc.py", code_str)
+            p.write("tests/test_calc.py", test_str)
+            code, out = p.osr("check", "T1")
+            clean_pass = (code == 0)
+            results.append((name, clean_pass, "OK" if clean_pass else out.strip()))
+        finally:
+            p.cleanup()
+
+    # 9: Multi-module internal dependency
+    p = EvalProject()
+    try:
+        p.setup_ready(card_text=f"""# T1: Task
+id: T1
+requirements: R1
+allowed_files: src/calc.py, src/helper.py, tests/test_calc.py
+context_files: .ai/PLAN.md
+verify: "{sys.executable}" -m unittest discover -s tests -t . -q
+
+## Goal
+Multi module clean task.
+## Constraints
+None.
+## Do not
+None.
+## Definition of done
+Completed multi module clean task.
+""")
+        code, out = p.osr("start", "T1")
+        if code == 0:
+            p.write("src/helper.py", "def get_num(): return 7\n")
+            p.write("src/calc.py", "from src.helper import get_num\ndef calc_num(): return get_num() * 3\n")
+            p.write("tests/test_calc.py", "import unittest\nfrom src.calc import calc_num\nclass MMTest(unittest.TestCase):\n    def test_calc(self): self.assertEqual(calc_num(), 21)\n")
+            code, out = p.osr("check", "T1")
+            clean_pass = (code == 0)
+            results.append(("multi_module_dep", clean_pass, "OK" if clean_pass else out.strip()))
+        else:
+            results.append(("multi_module_dep", False, "Failed to start: " + out))
+    finally:
+        p.cleanup()
+
+    # 10: Seam card with registered fixture & contract testing
+    p = EvalProject()
+    try:
+        seam_plan = """# Plan
+## Goal
+Calc with upstream user.
+## Non-goals
+None.
+## Requirements
+- R1: Calc
+  - AC: user profile data is loaded from json fixture [test_user]
+  - Check: auto
+## Seams
+| seam id | consumer | provider | authoritative source | how it is checked |
+|---|---|---|---|---|
+| user_svc | calc | user-service | services/user.py | contract-test |
+## Assumptions
+- [x] Python 3
+## Open questions
+"""
+        p.write("services/user.py", "# Upstream user service\n")
+        p.write("fixtures/user.json", '{"name": "Alice"}')
+        card_text = f"""# T1: Task
+id: T1
+requirements: R1
+seams: user_svc
+fixtures: fixtures/user.json
+allowed_files: src/calc.py, tests/test_calc.py
+context_files: .ai/PLAN.md, services/user.py
+verify: "{sys.executable}" -m unittest discover -s tests -t . -q
+
+## Goal
+Contract tested clean fixture.
+## Constraints
+None.
+## Do not
+None.
+## Definition of done
+Completed contract tested fixture.
+"""
+        p.osr("init")
+        cfg = json.loads(p.read(".ai/config.json"))
+        cfg["commands"] = {"test": {"cmd": f'"{sys.executable}" -m unittest discover -s tests -t . -q', "verified": False}}
+        cfg["global_verify"] = ["test"]
+        p.write(".ai/config.json", json.dumps(cfg))
+        p.osr("confirm-commands")
+        p.write(".ai/PLAN.md", seam_plan)
+        p.write(".ai/tasks/T1.md", card_text)
+        p.osr("fixture-add", "fixtures/user.json", "--seam", "user_svc", "--source", "captured staging API")
+        p.osr("approve-plan", "--by", "human")
+        code, out = p.osr("start", "T1")
+        if code == 0:
+            p.write("src/calc.py", "import json\ndef read_user(p):\n    return json.loads(open(p, encoding='utf-8').read())\n")
+            p.write("tests/test_calc.py", "import unittest\nfrom src.calc import read_user\nclass SeamTest(unittest.TestCase):\n    def test_user(self):\n        user = read_user('fixtures/user.json')\n        self.assertEqual(user['name'], 'Alice')\n")
+            code, out = p.osr("check", "T1")
+            clean_pass = (code == 0)
+            results.append(("seam_registered_fixture", clean_pass, "OK" if clean_pass else out.strip()))
+        else:
+            results.append(("seam_registered_fixture", False, "Failed to start: " + out))
+    finally:
+        p.cleanup()
+
+    # 11: Task with negative tests declared and verified
+    p = EvalProject()
+    try:
+        neg_plan = """# Plan
+## Goal
+Calc with negative tests.
+## Non-goals
+None.
+## Requirements
+- R1: Calc
+  - AC: integer value is parsed or raises value error [test_valid]
+  - Check: auto
+## Seams
+| seam id | consumer | provider | authoritative source | how it is checked |
+|---|---|---|---|---|
+| auth_svc | calc | auth-service | services/auth.py | contract-test |
+## Assumptions
+- [x] Python 3
+## Open questions
+"""
+        p.write("services/auth.py", "# Upstream auth service\n")
+        card_text = f"""# T1: Task
+id: T1
+requirements: R1
+seams: auth_svc
+negative_tests: test_invalid_val
+allowed_files: src/calc.py, tests/test_calc.py
+context_files: .ai/PLAN.md, services/auth.py
+verify: "{sys.executable}" -m unittest discover -s tests -t . -q
+
+## Goal
+Negative test declared clean run.
+## Constraints
+None.
+## Do not
+None.
+## Definition of done
+Completed negative test clean run.
+"""
+        p.osr("init")
+        cfg = json.loads(p.read(".ai/config.json"))
+        cfg["commands"] = {"test": {"cmd": f'"{sys.executable}" -m unittest discover -s tests -t . -q', "verified": False}}
+        cfg["global_verify"] = ["test"]
+        p.write(".ai/config.json", json.dumps(cfg))
+        p.osr("confirm-commands")
+        p.write(".ai/PLAN.md", neg_plan)
+        p.write(".ai/tasks/T1.md", card_text)
+        p.osr("approve-plan", "--by", "human")
+        code, out = p.osr("start", "T1")
+        if code == 0:
+            p.write("src/calc.py", "def parse_val(v):\n    if not v: raise ValueError('empty')\n    return int(v)\n")
+            p.write("tests/test_calc.py", "import unittest\nfrom src.calc import parse_val\nclass NegCleanTest(unittest.TestCase):\n    def test_valid(self): self.assertEqual(parse_val('42'), 42)\n    def test_invalid_val(self):\n        with self.assertRaises(ValueError): parse_val('')\n")
+            code, out = p.osr("check", "T1")
+            clean_pass = (code == 0)
+            results.append(("negative_tests_declared", clean_pass, "OK" if clean_pass else out.strip()))
+        else:
+            results.append(("negative_tests_declared", False, "Failed to start: " + out))
+    finally:
+        p.cleanup()
+
+    return results
 
 
 def run_adversarial_benchmark():
@@ -523,27 +719,30 @@ def run_adversarial_benchmark():
             known_misses.append(entry)
             results.append(entry)
 
-    # Clean runs
-    clean_passed, clean_details = eval_clean_honest_run()
-    false_positives = 0 if clean_passed else 1
+    # Clean runs across realistic multi-fixture projects
+    clean_runs = eval_clean_fixture_runs()
+    clean_runs_tested = len(clean_runs)
+    clean_failures = [c for c in clean_runs if not c[1]]
+    false_positives = len(clean_failures)
 
     total_cheats = len(active_evaluators) + len(known_miss_evaluators)
     active_total = len(active_evaluators)
     active_caught = len([v for v in caught_vectors if v["id"] in [a[0] for a in active_evaluators]])
     catch_rate = round(active_caught / active_total, 4) if active_total > 0 else 1.0
-    fp_rate = round(false_positives / 1.0, 4)
+    fp_rate = round(false_positives / clean_runs_tested, 4) if clean_runs_tested > 0 else 0.0
 
     return {
-        "version": "0.3.0-dev",
+        "version": "0.3.0",
         "total_cheats_tested": total_cheats,
         "cheats_caught": cheats_caught,
         "catch_rate": catch_rate,
         "caught_vectors": caught_vectors,
         "known_misses": known_misses,
-        "clean_runs_tested": 1,
+        "clean_runs_tested": clean_runs_tested,
         "false_positives": false_positives,
         "false_positive_rate": fp_rate,
-        "vectors": results
+        "vectors": results,
+        "clean_fixture_details": clean_runs
     }
 
 

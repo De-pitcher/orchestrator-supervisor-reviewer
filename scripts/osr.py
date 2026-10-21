@@ -27,7 +27,7 @@ import sys
 import time
 from pathlib import Path
 
-VERSION = "0.2.0"
+VERSION = "0.3.0"
 ROOT = Path.cwd()
 SCRIPT_DIR = Path(__file__).resolve().parent
 ASSETS = SCRIPT_DIR.parent / "assets"

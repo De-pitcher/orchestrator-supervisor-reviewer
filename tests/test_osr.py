@@ -1536,6 +1536,53 @@ VERDICT: PASS
         finally:
             p.cleanup()
 
+    def test_phase6_benchmark_and_honest_reporting(self):
+        from evals import eval_suite
+        report = eval_suite.run_adversarial_benchmark()
+        self.assertEqual(report["version"], "0.3.0")
+        self.assertGreaterEqual(len(report["caught_vectors"]), 10)
+        self.assertGreaterEqual(len(report["known_misses"]), 2)
+        # Multi-fixture clean run measurement: at least 10 clean projects tested
+        self.assertGreaterEqual(report["clean_runs_tested"], 10)
+        self.assertEqual(report["false_positives"], 0)
+        self.assertEqual(report["false_positive_rate"], 0.0)
+        # Vectors V9 and V10 must be in caught_vectors
+        caught_ids = {v["id"] for v in report["caught_vectors"]}
+        self.assertIn("V9", caught_ids)
+        self.assertIn("V10", caught_ids)
+        # Vectors V11 and V12 must be in known_misses
+        miss_ids = {v["id"] for v in report["known_misses"]}
+        self.assertIn("V11", miss_ids)
+        self.assertIn("V12", miss_ids)
+
+    def test_phase6_version_and_docs_integrity(self):
+        import scripts.osr as osr_module
+        # Core CLI version bump
+        self.assertEqual(osr_module.VERSION, "0.3.0")
+        
+        # pyproject.toml version
+        pyproject = (ROOT_DIR / "pyproject.toml").read_text(encoding="utf-8")
+        self.assertIn('version = "0.3.0"', pyproject)
+
+        # CHANGELOG.md exists and documents 0.3.0
+        changelog_path = ROOT_DIR / "CHANGELOG.md"
+        self.assertTrue(changelog_path.exists(), "CHANGELOG.md must exist")
+        changelog = changelog_path.read_text(encoding="utf-8")
+        self.assertIn("## [0.3.0]", changelog)
+
+        # README.md updates
+        readme = (ROOT_DIR / "README.md").read_text(encoding="utf-8")
+        self.assertIn("0.3.0", readme)
+        self.assertIn("## Seams", readme)
+        self.assertIn("## Fixtures", readme)
+        self.assertIn("Enforcement setup", readme)
+        self.assertIn("Not yet", readme)
+        self.assertNotIn("Python 3.9+", readme)
+        self.assertIn("Python 3.8+", readme)
+        self.assertIn("quick` skips review gates", readme)
+        self.assertIn(".osr-anchor", readme)
+
+
 
 
 
