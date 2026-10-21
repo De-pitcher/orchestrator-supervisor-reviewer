@@ -563,6 +563,38 @@ class OsrTests(unittest.TestCase):
         self.assertNotEqual(code, 0)
         self.assertIn("scope", out.lower())
 
+    def test_pluggable_checkers_in_config_block_on_failure(self):
+        p = self.p
+        p.setup_ready()
+        # Add pluggable checker to config before starting
+        cfg_path = p.dir / ".ai" / "config.json"
+        cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
+        cfg["checkers"] = [
+            {
+                "name": "custom_linter",
+                "cmd": f'"{sys.executable}" -c "import sys, json; sys.stdout.write(json.dumps({{\\"ok\\": False, \\"flags\\": [\\"custom_violation\\"], \\"errors\\": [\\"Rule 42 failed\\"]}})); sys.exit(1)"'
+            }
+        ]
+        cfg_path.write_text(json.dumps(cfg, indent=2), encoding="utf-8")
+        # Re-approve plan to lock in modified config hash
+        code, out = p.osr("approve-plan", "--by", "human")
+        self.assertEqual(code, 0, out)
+        p.osr("start", "T1", "--model", "gemini-flash")
+        p.implement()
+        code, out = p.osr("check", "T1")
+        self.assertNotEqual(code, 0)
+        self.assertIn("custom_violation", out)
+
+    def test_adversarial_eval_suite_benchmarks_catch_rate(self):
+        # Must import and run evals.eval_suite benchmark
+        from evals.eval_suite import run_adversarial_benchmark
+        report = run_adversarial_benchmark()
+        self.assertIn("catch_rate", report)
+        self.assertEqual(report["catch_rate"], 1.0)
+        self.assertEqual(report["false_positive_rate"], 0.0)
+        self.assertGreaterEqual(report["total_cheats_tested"], 6)
+
+
 
 
 

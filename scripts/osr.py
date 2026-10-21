@@ -27,7 +27,7 @@ import sys
 import time
 from pathlib import Path
 
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 ROOT = Path.cwd()
 SCRIPT_DIR = Path(__file__).resolve().parent
 ASSETS = SCRIPT_DIR.parent / "assets"
@@ -63,6 +63,7 @@ DEFAULT_CFG = {
     "commands": {},
     "global_verify": [],
     "extra_placeholder_patterns": [],
+    "checkers": [],
 }
 
 PLACEHOLDER_PATTERNS = [
@@ -838,12 +839,51 @@ def run_check(cfg, st, tid, card, snap, cur):
             if new.get("skips", 0) > old.get("skips", 0):
                 flags.append(("skips-added:%s" % p, "skip/only/xfail marker added"))
     waived = {w["flag"] for w in st["waivers"] if w["task"] == tid}
+    checker_errors = []
+    for c in cfg.get("checkers", []):
+        c_name = c.get("name", "checker")
+        c_cmd = c.get("cmd")
+        if not c_cmd:
+            continue
+        try:
+            res = subprocess.run(
+                c_cmd, shell=True, capture_output=True, text=True,
+                cwd=str(ROOT), timeout=c.get("timeout", cfg.get("command_timeout_seconds", 60))
+            )
+            out_text = (res.stdout or "") + (res.stderr or "")
+            parsed_json = None
+            try:
+                stripped = (res.stdout or "").strip()
+                if stripped.startswith("{") and stripped.endswith("}"):
+                    parsed_json = json.loads(stripped)
+            except Exception:
+                pass
+
+            c_ok = (res.returncode == 0)
+            if parsed_json and isinstance(parsed_json, dict):
+                if parsed_json.get("ok") is False or parsed_json.get("status") in ("fail", "error"):
+                    c_ok = False
+                for fl in parsed_json.get("flags", []):
+                    flags.append((fl, "pluggable checker '%s' flag" % c_name))
+                for err in parsed_json.get("errors", []):
+                    checker_errors.append("%s: %s" % (c_name, err))
+
+            if not c_ok:
+                if not any(f[0].startswith(c_name) or (parsed_json and f[0] in parsed_json.get("flags", [])) for f in flags):
+                    flags.append(("checker-failed:%s" % c_name, "pluggable checker '%s' failed with exit code %s" % (c_name, res.returncode)))
+                if out_text and not checker_errors:
+                    checker_errors.append("%s: %s" % (c_name, out_text.strip()[:200]))
+        except Exception as ex:
+            flags.append(("checker-error:%s" % c_name, str(ex)))
+            checker_errors.append("%s: exception %s" % (c_name, ex))
+
     unwaived = [(f, m) for f, m in flags if f not in waived]
     refs = check_refs(ch)
-    ok = not viol and not unwaived and not refs["unresolved"] and not refs["syntax"]
+    ok = not viol and not unwaived and not refs["unresolved"] and not refs["syntax"] and not checker_errors
     return {
         "ok": ok, "fp": fp, "changed": ch, "violations": viol, "flags": [f for f, _ in flags],
         "unwaived": unwaived, "waived": sorted(f for f, _ in flags if f in waived), "refs": refs,
+        "checker_errors": checker_errors,
     }
 
 
@@ -855,6 +895,8 @@ def print_check(r):
         print("SCOPE VIOLATION: %s" % v)
     for f, m in r["unwaived"]:
         print("FLAG: %s  (%s)\n  waive only with a real reason: osr waive <task> --flag \"%s\" --reason \"...\"" % (f, m, f))
+    for err in r.get("checker_errors", []):
+        print("CHECKER ERROR: %s" % err)
     for u in r["refs"]["unresolved"]:
         print("UNRESOLVED REFERENCE: %s" % u)
     for u in r["refs"]["syntax"]:
