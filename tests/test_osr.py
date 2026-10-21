@@ -592,7 +592,11 @@ class OsrTests(unittest.TestCase):
         self.assertIn("catch_rate", report)
         self.assertEqual(report["catch_rate"], 1.0)
         self.assertEqual(report["false_positive_rate"], 0.0)
-        self.assertGreaterEqual(report["total_cheats_tested"], 6)
+        self.assertGreaterEqual(report["total_cheats_tested"], 12)
+        self.assertEqual(len(report["caught_vectors"]), 8)
+        self.assertEqual(len(report["known_misses"]), 4)
+        miss_ids = [m["id"] for m in report["known_misses"]]
+        self.assertEqual(miss_ids, ["V9", "V10", "V11", "V12"])
 
 
 
