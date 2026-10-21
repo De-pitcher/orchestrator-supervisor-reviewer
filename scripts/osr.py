@@ -928,6 +928,35 @@ def validate_quality_review(text):
     return errs, items, derived
 
 
+def extract_passed_tests(text):
+    passed = set()
+    for m in re.finditer(r"^([a-zA-Z0-9_.:-]+)(?:\s*\([^)]*\))?\s*\.\.\.\s*ok\b", text, re.M):
+        passed.add(m.group(1).split(".")[-1])
+        passed.add(m.group(1))
+    for m in re.finditer(r"::([a-zA-Z0-9_.:-]+)\s+PASSED", text):
+        passed.add(m.group(1))
+    for m in re.finditer(r"PASSED\s+\S*?::([a-zA-Z0-9_.:-]+)", text):
+        passed.add(m.group(1))
+    for m in re.finditer(r"^[ \t]*(?:✓|√)\s+([a-zA-Z0-9_.:-]+)", text, re.M):
+        passed.add(m.group(1))
+    for m in re.finditer(r'<testcase\s+[^>]*name=["\']([^"\']+)["\'][^>]*>(?!\s*<(?:failure|error|skipped))', text, re.I):
+        passed.add(m.group(1))
+    log_dir = ai("logs")
+    if log_dir.exists():
+        for log_xml in log_dir.glob("*.xml"):
+            try:
+                import xml.etree.ElementTree as ET
+                tree = ET.parse(log_xml)
+                for tc in tree.iter("testcase"):
+                    if not list(tc.iter("failure")) and not list(tc.iter("error")) and not list(tc.iter("skipped")):
+                        name = tc.get("name")
+                        if name:
+                            passed.add(name)
+            except Exception:
+                pass
+    return sorted(passed)
+
+
 # ----------------------------------------------------------------------------- gates and next action
 def gate_status(cfg, st, led, tid, card, cur=None, snap=None):
     ts = task_state(st, tid)
@@ -947,9 +976,25 @@ def gate_status(cfg, st, led, tid, card, cur=None, snap=None):
     gates.append(("verify", bool(e and e["data"].get("ok") and fresh(e)),
                   "no passing verify for the current code" if not e or not fresh(e) or not e["data"].get("ok") else "ok"))
     for stage in ("spec", "quality"):
-        e = led.latest("review", tid, a, stage)
-        good = bool(e and e["data"].get("verdict") == "PASS" and fresh(e))
+        e_rev = led.latest("review", tid, a, stage)
+        good = bool(e_rev and e_rev["data"].get("verdict") == "PASS" and fresh(e_rev))
         gates.append(("review-" + stage, good, "no passing, current %s review" % stage if not good else "ok"))
+
+    plan, _ = parse_plan()
+    if plan and e and fresh(e):
+        passed_tests = set(e["data"].get("passed_tests", []))
+        for r_id in card.get("requirements", []):
+            req = plan.get(r_id, {})
+            for ac in req.get("ac", []):
+                m = re.search(r"\[([a-zA-Z0-9_.:-]+)\]", ac)
+                if m:
+                    test_id = m.group(1)
+                    test_passed = any(test_id == pt or test_id in pt for pt in passed_tests)
+                    gates.append((
+                        "test-" + test_id,
+                        test_passed,
+                        "test '%s' mapped from %s did not run and pass" % (test_id, r_id) if not test_passed else "ok"
+                    ))
     return gates, fp
 
 
@@ -1322,8 +1367,15 @@ def cmd_verify(a):
                 red_green[cmd_name] = "preserved_green"
             else:
                 red_green[cmd_name] = "failing"
+    all_output_text = ""
+    for res in results:
+        if res.get("log"):
+            log_p = ai("logs", res["log"])
+            if log_p.exists():
+                all_output_text += "\n" + log_p.read_text(encoding="utf-8", errors="replace")
+    passed_tests = extract_passed_tests(all_output_text)
     clean_results = [{k: v for k, v in x.items() if k != "tail"} for x in results]
-    led.append("verify", tid, ts["attempts"], ok=ok, fp=r2["fp"], results=clean_results, red_green=red_green)
+    led.append("verify", tid, ts["attempts"], ok=ok, fp=r2["fp"], results=clean_results, red_green=red_green, passed_tests=passed_tests)
     if not ok:
         ts["failures"] += 1
         save_state(st)
@@ -1337,6 +1389,7 @@ def cmd_verify(a):
             "max_failures": cfg["max_inner_failures"],
             "results": clean_results,
             "red_green": red_green,
+            "passed_tests": passed_tests,
             "next": next_action()
         }, code=0 if ok else 2)
     print("\nVERIFY: %s" % ("PASS" if ok else "FAIL  (failures this attempt: %d/%d)" % (ts["failures"], cfg["max_inner_failures"])))
@@ -1505,6 +1558,13 @@ def requirement_rows(cfg, st, led, plan):
                 if any(s.get("status") == "PASS" for s in statuses) and v["check"] == "auto":
                     status = "VERIFIED"
                     ev = next(s["evidence"] for s in statuses if s.get("status") == "PASS")
+                    test_tags = []
+                    for ac in v.get("ac", []):
+                        m = re.search(r"\[([a-zA-Z0-9_.:-]+)\]", ac)
+                        if m:
+                            test_tags.append(m.group(1))
+                    if test_tags:
+                        ev += " (tests: %s)" % ", ".join(test_tags)
                 elif r in st["signoffs"]:
                     status, ev = "HUMAN-SIGNED", st["signoffs"][r]["by"]
                 else:

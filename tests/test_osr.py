@@ -390,6 +390,24 @@ class OsrTests(unittest.TestCase):
         self.assertNotEqual(code, 0)
         self.assertIn("cannot prove anything", out)
 
+    def test_criteria_test_traceability_blocks_done_when_missing(self):
+        p = self.p
+        p.setup_ready()
+        custom_plan = PLAN.replace("- AC: add(2,3) returns 5 and add(-1,1) returns 0", "- AC: [test_special] add(2,3) returns 5 and add(-1,1) returns 0")
+        p.write(".ai/PLAN.md", custom_plan)
+        p.osr("approve-plan", "--by", "human")
+        p.osr("start", "T1", "--model", "m")
+        p.implement()
+        code, out = p.osr("verify", "T1")
+        self.assertEqual(code, 0, out)
+        p.write(".ai/reviews/T1.spec.md", SPEC_OK)
+        p.osr("review", "T1", "spec", "--reviewer", "model-b")
+        p.write(".ai/reviews/T1.quality.md", QUALITY_OK)
+        p.osr("review", "T1", "quality", "--reviewer", "model-b")
+        code, out = p.osr("done", "T1")
+        self.assertNotEqual(code, 0)
+        self.assertIn("test_special", out)
+
 
 if __name__ == "__main__":
     unittest.main()
