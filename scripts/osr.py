@@ -457,6 +457,12 @@ def snap_path(tid):
 
 
 # ----------------------------------------------------------------------------- plan and cards
+class Plan(dict):
+    def __init__(self, reqs, seams=None):
+        super().__init__(reqs)
+        self.seams = seams or {}
+
+
 def parse_plan():
     p = ai("PLAN.md")
     if not p.exists():
@@ -504,11 +510,31 @@ def parse_plan():
             for ln in lines:
                 if re.match(r"^\s*[-*]\s*\[ \]", ln):
                     errs.append("PLAN.md: unresolved item under '%s': %s (resolve it with the human, then tick [x])" % (key, ln.strip()))
-    return reqs, errs
+    seams = {}
+    for ln in sections.get("seams", []):
+        raw = ln.strip()
+        if not raw or not raw.startswith("|"):
+            continue
+        parts = [p.strip() for p in raw.strip("|").split("|")]
+        if len(parts) >= 4:
+            sid = parts[0]
+            if sid.lower() in ("seam id", "seam_id", "---") or sid.startswith(":-") or sid.startswith("-"):
+                continue
+            consumer = parts[1]
+            provider = parts[2]
+            source = parts[3]
+            how = parts[4] if len(parts) > 4 else ""
+            seams[sid] = {
+                "consumer": consumer,
+                "provider": provider,
+                "source": source,
+                "how": how,
+            }
+    return Plan(reqs, seams), errs
 
 
-CARD_KEYS = ["id", "requirements", "depends_on", "allowed_files", "forbidden_files", "context_files", "verify"]
-CARD_LIST_KEYS = ["requirements", "depends_on", "allowed_files", "forbidden_files", "context_files"]
+CARD_KEYS = ["id", "requirements", "depends_on", "allowed_files", "forbidden_files", "context_files", "verify", "seams"]
+CARD_LIST_KEYS = ["requirements", "depends_on", "allowed_files", "forbidden_files", "context_files", "seams"]
 CARD_HEADINGS = ["goal", "constraints", "do not", "definition of done"]
 
 
@@ -620,6 +646,18 @@ def validate_card(tid, cfg, plan, strict_files=True):
     for d in c["depends_on"]:
         if d not in task_ids():
             errs.append("%s: depends_on '%s' is not a task" % (tid, d))
+    if re.search(r"^\s*context_contracts\s*:", c.get("_text", ""), re.M | re.I):
+        errs.append("%s: 'context_contracts' is not permitted; use 'context_files'" % tid)
+    seams_dict = getattr(plan, "seams", {}) if plan is not None else {}
+    for s in c.get("seams", []):
+        if s not in seams_dict:
+            errs.append("%s: seam '%s' is not declared in PLAN.md Seams table" % (tid, s))
+        else:
+            src = seams_dict[s].get("source", "").strip()
+            normalized_cf = [Path(cf).as_posix() for cf in c["context_files"]]
+            normalized_src = Path(src).as_posix() if src else ""
+            if not normalized_src or normalized_src not in normalized_cf:
+                errs.append("%s: seam '%s' authoritative source '%s' missing from context_files" % (tid, s, src))
     return c, errs
 
 
@@ -1287,6 +1325,18 @@ def cmd_env_check(a):
 
 def cmd_plan_check(a):
     plan, errs = parse_plan()
+    warnings = []
+    if plan:
+        seams = getattr(plan, "seams", {})
+        if not seams:
+            external_kw = re.compile(r"\b(api|service|endpoint|queue|socket|websocket|grpc|rpc|http|rest)\b", re.I)
+            for r, v in plan.items():
+                text_to_check = v["text"] + " " + " ".join(v.get("ac", []))
+                m = external_kw.search(text_to_check)
+                if m:
+                    warnings.append("PLAN WARNING: requirement %s mentions external interface ('%s') but Seams table is empty (consider declaring in ## Seams)" % (r, m.group(1)))
+    for w in warnings:
+        print(w)
     for e in errs:
         print("PLAN ERROR: " + e)
     if not errs:

@@ -31,7 +31,7 @@ Each has a reason. The reason matters more than the rule, so you can apply it to
 2. **Read before you write.** Open every file before editing it, and the card's `context_files` before starting. Guessing at file contents is the most common source of invented code.
 3. **Never elide.** No "rest unchanged", no `...`, no TODO stubs, no truncated files. The tool flags them, but more importantly a half-written file silently destroys working code.
 4. **Never invent references.** Before using an import, function, flag, config key or endpoint, find where it is defined (grep, open the file, read the docs). If you cannot find it, it does not exist.
-5. **Stay inside the card.** Touch only `allowed_files`. Needing another file means the card is wrong: stop and report, do not widen scope quietly.
+5. **Stay inside the card.** Touch only `allowed_files`. Needing another file means the card is wrong: stop and report, do not widen scope quietly. (Rule 5 limits edits only. Reading provider code or contracts via `context_files` is allowed and expected).
 6. **Never weaken a test to make it pass.** Do not delete assertions, add skips, or loosen expectations. Fix the code or ask the human.
 7. **Surface assumptions, do not bury them.** Ambiguity goes to the human before it goes into code. A wrong guess implemented confidently costs more than a question.
 8. **Every retry must change something.** Same input gives the same failure. Diagnose first (see "When something fails").

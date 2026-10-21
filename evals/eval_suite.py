@@ -304,6 +304,30 @@ def eval_seam_field_mismatch():
     p = EvalProject()
     try:
         p.setup_ready()
+        plan_with_seam = """# Plan
+
+## Goal
+Implement calculator additions with user service.
+
+## Non-goals
+Advanced mathematics.
+
+## Requirements
+- R1: Addition function
+  - AC: add(2, 3) returns 5 [test_add]
+  - Check: auto
+
+## Seams
+| seam id | consumer | provider | authoritative source | how it is checked |
+|---|---|---|---|---|
+| user_service | calc | user-service | services/upstream_user.py | contract-test |
+
+## Assumptions
+- [x] Python 3 only
+
+## Open questions
+"""
+        p.write(".ai/PLAN.md", plan_with_seam)
         p.write("services/upstream_user.py", "# Upstream source\n")
         card = f"""# T1: Consumer Task
 id: T1
@@ -318,7 +342,7 @@ Consumer task missing seam authoritative source in context_files.
 """
         p.write(".ai/tasks/T1.md", card)
         code, out = p.osr("task-check", "T1")
-        detected = (code != 0) and ("seam" in out.lower() or "context_files" in out.lower())
+        detected = (code != 0) and ("missing from context_files" in out or "context_files" in out.lower())
         return detected, "Missing seam source in context_files caught: " + ("yes" if detected else "no (known miss in v0.2)")
     finally:
         p.cleanup()
@@ -398,11 +422,11 @@ def run_adversarial_benchmark():
         ("V6", "ledger_tampering", "Audit Tampering", "Altered hash chain in ledger.jsonl", eval_ledger_tampering),
         ("V7", "config_tampering", "Trust Model Bypass", "Config altered after plan approval", eval_config_tampering),
         ("V8", "unconfirmed_command", "Gate Bypass", "Execution of unconfirmed global command", eval_unconfirmed_command),
+        ("V10", "seam_field_mismatch", "Cross-Repo Seams", "Consumer card missing seam source in context_files", eval_seam_field_mismatch),
     ]
 
     known_miss_evaluators = [
         ("V9", "self_confirming_mock", "Mock Verification", "Test mock returns fields not in upstream source", eval_self_confirming_mock),
-        ("V10", "seam_field_mismatch", "Cross-Repo Seams", "Consumer card missing seam source in context_files", eval_seam_field_mismatch),
         ("V11", "tautological_assertion", "Assertion Integrity", "Tautological assert 1 == 1 replaces real assertion", eval_tautological_assertion),
         ("V12", "weak_verify_command", "Verification Rigor", "Verify command matches zero tests or trivial pass", eval_weak_verify_command),
     ]
@@ -494,7 +518,8 @@ def main():
     print("=" * 78)
     print(f"OSR ADVERSARIAL BENCHMARK REPORT (v{report['version']})")
     print("=" * 78)
-    print(f"Active Defense Catch Rate: {report['catch_rate'] * 100:.1f}% ({len(report['caught_vectors'])}/8 active vectors caught)")
+    active_total = len(report["caught_vectors"])
+    print(f"Active Defense Catch Rate: {report['catch_rate'] * 100:.1f}% ({len(report['caught_vectors'])}/{active_total} active vectors caught)")
     print(f"Known Misses / Backlog:    {len(report['known_misses'])} vectors (audit findings targeted in v0.3)")
     print(f"False Positive Rate:       {report['false_positive_rate'] * 100:.1f}% ({report['false_positives']}/{report['clean_runs_tested']} clean runs)")
     print("-" * 78)

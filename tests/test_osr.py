@@ -593,10 +593,210 @@ class OsrTests(unittest.TestCase):
         self.assertEqual(report["catch_rate"], 1.0)
         self.assertEqual(report["false_positive_rate"], 0.0)
         self.assertGreaterEqual(report["total_cheats_tested"], 12)
-        self.assertEqual(len(report["caught_vectors"]), 8)
-        self.assertEqual(len(report["known_misses"]), 4)
+        self.assertEqual(len(report["caught_vectors"]), 9)
+        self.assertEqual(len(report["known_misses"]), 3)
+        self.assertIn("V10", [v["id"] for v in report["caught_vectors"]])
         miss_ids = [m["id"] for m in report["known_misses"]]
-        self.assertEqual(miss_ids, ["V9", "V10", "V11", "V12"])
+        self.assertEqual(miss_ids, ["V9", "V11", "V12"])
+
+    def test_seams_plan_check_warning_when_seams_table_missing(self):
+        p = Project()
+        try:
+            p.osr("init")
+            # PLAN mentions external API/service/socket/queue in requirement R1, but has no Seams table
+            plan_with_external = """# Plan: Service Integration
+## Goal
+Integrate external user service.
+## Non-goals
+None.
+## Requirements
+- R1: Consumer connects to external user service API endpoint
+  - AC: fetches user details over HTTP REST endpoint successfully
+  - Check: auto
+## Assumptions
+- [x] Python 3 only
+## Open questions
+"""
+            p.write(".ai/PLAN.md", plan_with_external)
+            code, out = p.osr("plan-check")
+            self.assertEqual(code, 0)
+            self.assertIn("PLAN WARNING:", out)
+            self.assertIn("Seams table is empty", out)
+        finally:
+            p.cleanup()
+
+    def test_seams_plan_check_passes_with_seams_table(self):
+        p = Project()
+        try:
+            p.osr("init")
+            plan_with_seams = """# Plan: Service Integration
+## Goal
+Integrate external user service.
+## Non-goals
+None.
+## Requirements
+- R1: Consumer connects to external user service API endpoint
+  - AC: fetches user details over HTTP REST endpoint successfully
+  - Check: auto
+## Seams
+| seam id | consumer | provider | authoritative source | how it is checked |
+|---|---|---|---|---|
+| user-api | client | user-service | services/user_service.py | contract-test |
+
+## Assumptions
+- [x] Python 3 only
+## Open questions
+"""
+            p.write(".ai/PLAN.md", plan_with_seams)
+            code, out = p.osr("plan-check")
+            self.assertEqual(code, 0)
+            self.assertNotIn("PLAN WARNING:", out)
+            self.assertIn("PLAN OK:", out)
+        finally:
+            p.cleanup()
+
+    def test_task_check_enforces_seam_authoritative_source_in_context_files(self):
+        p = Project()
+        try:
+            p.osr("init")
+            plan_text = """# Plan: Service Integration
+## Goal
+Integrate external user service.
+## Non-goals
+None.
+## Requirements
+- R1: Consumer connects to external user service API endpoint
+  - AC: fetches user details over HTTP REST endpoint successfully
+  - Check: auto
+## Seams
+| seam id | consumer | provider | authoritative source | how it is checked |
+|---|---|---|---|---|
+| user-api | client | user-service | services/user_service.py | contract-test |
+
+## Assumptions
+- [x] Python 3 only
+## Open questions
+"""
+            p.write(".ai/PLAN.md", plan_text)
+            p.write("services/user_service.py", "# Upstream source\n")
+
+            # 1. Failing card: declares seam 'user-api', but context_files omits 'services/user_service.py'
+            card_missing_source = f"""# T1: Consumer Task
+id: T1
+requirements: R1
+seams: user-api
+allowed_files: src/calc.py, tests/test_calc.py
+context_files: .ai/PLAN.md
+verify: "{sys.executable}" -m unittest discover -s tests -q
+
+## Goal
+Consumer task.
+## Constraints
+None.
+## Do not
+None.
+## Definition of done
+Done.
+"""
+            p.write(".ai/tasks/T1.md", card_missing_source)
+            code, out = p.osr("task-check", "T1")
+            self.assertNotEqual(code, 0)
+            self.assertIn("services/user_service.py", out)
+            self.assertIn("missing from context_files", out)
+
+            # 2. Cheat attempt: using an unauthorized context_contracts field instead of context_files
+            card_cheat = f"""# T1: Consumer Task
+id: T1
+requirements: R1
+seams: user-api
+context_contracts: services/user_service.py
+allowed_files: src/calc.py, tests/test_calc.py
+context_files: .ai/PLAN.md
+verify: "{sys.executable}" -m unittest discover -s tests -q
+
+## Goal
+Cheat attempt.
+## Constraints
+None.
+## Do not
+None.
+## Definition of done
+Done.
+"""
+            p.write(".ai/tasks/T1.md", card_cheat)
+            code, out = p.osr("task-check", "T1")
+            self.assertNotEqual(code, 0)
+            self.assertIn("missing from context_files", out)
+
+            # 3. Undeclared seam in card fails
+            card_unknown_seam = f"""# T1: Consumer Task
+id: T1
+requirements: R1
+seams: non-existent-seam
+allowed_files: src/calc.py, tests/test_calc.py
+context_files: .ai/PLAN.md, services/user_service.py
+verify: "{sys.executable}" -m unittest discover -s tests -q
+
+## Goal
+Unknown seam.
+## Constraints
+None.
+## Do not
+None.
+## Definition of done
+Done.
+"""
+            p.write(".ai/tasks/T1.md", card_unknown_seam)
+            code, out = p.osr("task-check", "T1")
+            self.assertNotEqual(code, 0)
+            self.assertIn("non-existent-seam", out)
+
+            # 4. Valid card with seam source in context_files passes cleanly
+            card_valid = f"""# T1: Consumer Task
+id: T1
+requirements: R1
+seams: user-api
+allowed_files: src/calc.py, tests/test_calc.py
+context_files: .ai/PLAN.md, services/user_service.py
+verify: "{sys.executable}" -m unittest discover -s tests -q
+
+## Goal
+Valid seam card.
+## Constraints
+None.
+## Do not
+None.
+## Definition of done
+Done.
+"""
+            p.write(".ai/tasks/T1.md", card_valid)
+            code, out = p.osr("task-check", "T1")
+            self.assertEqual(code, 0, out)
+            self.assertIn("T1: OK", out)
+
+            # 5. Card with no seams: field behaves exactly as before
+            card_no_seams = f"""# T1: Normal Task
+id: T1
+requirements: R1
+allowed_files: src/calc.py, tests/test_calc.py
+context_files: .ai/PLAN.md
+verify: "{sys.executable}" -m unittest discover -s tests -q
+
+## Goal
+Normal card without seams.
+## Constraints
+None.
+## Do not
+None.
+## Definition of done
+Done.
+"""
+            p.write(".ai/tasks/T1.md", card_no_seams)
+            code, out = p.osr("task-check", "T1")
+            self.assertEqual(code, 0, out)
+            self.assertIn("T1: OK", out)
+        finally:
+            p.cleanup()
 
 
 
