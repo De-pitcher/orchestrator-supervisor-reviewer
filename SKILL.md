@@ -36,7 +36,7 @@ Each has a reason. The reason matters more than the rule, so you can apply it to
 7. **Surface assumptions, do not bury them.** Ambiguity goes to the human before it goes into code. A wrong guess implemented confidently costs more than a question.
 8. **Every retry must change something.** Same input gives the same failure. Diagnose first (see "When something fails").
 9. **Mark what you cannot verify as UNVERIFIED.** Visual quality, UX, tone, intent have no machine check. Say so and let the human sign off. Never mark them passed.
-10. **Humans own supervisory authority.** Four commands (`approve-plan`, `unblock`, `signoff`, `reset`) plus approval of sensitive waivers (`waive --approved-by` for tests, skips or secrets) belong exclusively to the human operator. Never run these yourself. Stop and ask.
+10. **Humans own supervisory authority.** Human commands (`approve-plan`, `unblock`, `signoff`, `reset`) and sensitive waivers (`waive --approved-by` for tests, skips or secrets) belong exclusively to the human operator. When `OSR_APPROVAL_SECRET` is set, these commands require `--secret <token>`. Never run these yourself. Stop and ask.
 
 ## Hats
 
@@ -44,7 +44,7 @@ You wear three hats. Keep them separate; mixing them is how mistakes get approve
 
 - **Orchestrator:** turns the design into a plan and task cards, picks the next task, runs triage on failures. Never writes feature code while wearing this hat.
 - **Builder:** implements exactly one task card. Reads only the card and its context files. Does not review its own work.
-- **Reviewer:** assumes the code is wrong until the evidence says otherwise. Reviews the diff, not the builder's explanation of it.
+- **Reviewer:** assumes the code is wrong until the evidence says otherwise. Reviews the diff, not the builder's explanation of it. Run `osr review-pack Tn` to package an unbiased review bundle containing only the task card, acceptance criteria, and unified diff without builder reasoning.
 
 With one model, switch hats explicitly and start the reviewer pass fresh: re-read the changed files from disk, do not rely on what you remember writing. With several models or sessions, give the reviewer role to a different model than the builder. Pass `--model` on `start` and `--reviewer` on `review`; the tool records when they are the same and shows it in the audit (set `require_distinct_reviewer` in `.ai/config.json` to forbid it). See `references/setups.md`.
 
@@ -68,10 +68,11 @@ Each phase has a gate the tool enforces. You cannot skip ahead because the next 
 
 **Phase 7, integrate.** After dependent tasks finish, run the integration task. Components that pass alone can fail together; do not skip this.
 
-**Phase 8, audit.** `osr audit` writes `.ai/AUDIT.md`: every requirement mapped to a task and evidence. Exit 0 means all verified or human-signed. Exit 2 means finished, with items awaiting human sign-off. Exit 1 means gaps. Report the audit to the human as it is, including UNVERIFIED items and waivers.
+**Phase 8, audit.** `osr audit` writes `.ai/AUDIT.md`: every requirement mapped to a task and evidence. Run `osr anchor` to commit the ledger head hash externally (e.g. `.osr-anchor` or git commit), detecting any subsequent ledger rollback. Exit 0 means all verified or human-signed. Exit 2 means finished, with items awaiting human sign-off. Exit 1 means gaps. Report the audit to the human as it is, including UNVERIFIED items and waivers.
 
 ## Scale the paperwork, never the gates
 
+- **Quick path** (small bug fixes): for single-command verification with zero card overhead, run `osr quick --verify "<cmd>" --allowed "<file1>,<file2>"`. Scope limits and real command verification are strictly enforced.
 - **Lite** (a small fix): one requirement, one card, a short plan. The gates still run.
 - **Standard** (a feature): the full flow above.
 - **Full** (large or risky work): add an Interfaces section, an integration task, a different model as reviewer (`require_distinct_reviewer`), and run `osr ledger-verify` and `osr audit` in CI.

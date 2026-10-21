@@ -41,19 +41,26 @@ Set an alias or wrapper so `osr` is short:
 
 The project root is the current directory, or pass `--root <path>` before the command.
 
-## Continuous integration
+## Continuous integration & Anchoring
 
-The ledger and plan make good CI gates. A minimal job:
+The ledger, plan, and anchor make solid CI gates. A minimal job:
 
 ```yaml
-- run: python path/to/scripts/osr.py ledger-verify
+- run: python path/to/scripts/osr.py ledger-verify --anchor .osr-anchor
 - run: python path/to/scripts/osr.py audit
 ```
 
-`ledger-verify` fails if the ledger was edited or truncated. `audit` fails (exit 1) if requirements are uncovered or tasks are unfinished, and exits 2 when only human sign-offs are pending; decide in CI whether 2 should block.
+`ledger-verify` fails if the ledger was edited, rolled back, or truncated. `osr anchor` commits the current ledger sequence and hash externally to prevent rollback attacks. `audit` fails (exit 1) if requirements are uncovered or tasks are unfinished, and exits 2 when only human sign-offs are pending; decide in CI whether 2 should block.
+
+## Harness enforcement & Antigravity hooks
+
+To prevent agents from bypassing human authority or widening scope:
+- **Antigravity Hooks (`integrations/antigravity/hooks.json`)**: Configures `PreToolUse` hooks (`pre_tool.py`) that read active task cards and hard-deny any file modifications outside `allowed_files`. Also intercepts and denies attempts by the agent to run human-only commands (`approve-plan`, `unblock`, `signoff`, `reset`) or read approval secret files.
+- **Completion Gate (`stop_hook.py`)**: Checks `osr next` before allowing an agent session to terminate, preventing premature completion when tasks remain undone.
+- **Git Pre-Commit Hook (`integrations/git/pre_commit.py`)**: Validates ledger integrity and ensures all active changes comply with plan approval before any `git commit` succeeds.
+- **Approval Secrets (`OSR_APPROVAL_SECRET`)**: Configure an environment secret or external token file. Human commands require `--secret <token>`, preventing unauthorized self-approval.
 
 ## Team habits
 
-- Commit `.ai/PLAN.md`, `tasks/`, `reviews/`, `ledger.jsonl`, `config.json`, `state.json`. `.ai/.gitignore` already excludes logs and snapshots.
-- The human-only commands (`approve-plan`, `unblock`, `signoff`, `reset`, human-approved waivers) are honor-system inside the tool, because the tool cannot tell who typed a command. To make them real, keep the AI's shell from running them (a harness permission rule or wrapper) or require them in code review, where the ledger shows exactly who approved what.
+- Commit `.ai/PLAN.md`, `tasks/`, `reviews/`, `ledger.jsonl`, `config.json`, `state.json`, and `.osr-anchor`. `.ai/.gitignore` already excludes logs and snapshots.
 - On a team repository, treat `PLAN.md` approval like merging a design doc.

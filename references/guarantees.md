@@ -29,7 +29,7 @@ It is **not** a promise of 100% correct code. No process can promise that, becau
 | Lazy reviews | strict format, per-check notes, break attempts, no re-submitting an old review | shallow but well-formatted reviews |
 | Blind retry loops | failure cap, mandatory triage, input-change rules | misdiagnosis of the layer |
 | Stale approvals | work fingerprints; any change after verify or review invalidates them | none |
-| Tampered records | hash-chained ledger | someone rewriting the whole chain deliberately |
+| Tampered records | hash-chained ledger and external anchoring (`osr anchor`) | none when anchored externally |
 | Context bloat | card length cap, context budget, state in files | the budget being set too high |
 | Uncovered requirements | coverage check and final audit | requirement wrongly written |
 
@@ -38,9 +38,9 @@ It is **not** a promise of 100% correct code. No process can promise that, becau
 - **Plan correctness.** If the human approves a wrong plan, the tool builds the wrong thing perfectly.
 - **Test quality.** "All green" means the checks passed, not that the checks are good. Weak acceptance criteria give weak tests.
 - **Subjective quality.** Design, UX, copy, naming taste, product fit. These are UNVERIFIED until a human signs off.
-- **Languages without a checker.** Reference checking is built in for Python and JS/TS; others rely on a compiler or type-check command you configure and confirm. Unchecked files are listed in the audit.
-- **Who runs what.** The tool cannot tell a human from an AI typing a command. See `references/setups.md` on making human-only steps real.
-- **Security.** It flags secrets and review check C3 prompts for security thinking, but it is not a security scanner. Run one.
+- **Languages without a checker.** Reference checking is built in for Python and JS/TS; any other language can plug in external checkers via `.ai/config.json`.
+- **Who runs what.** Cryptographic secrets (`OSR_APPROVAL_SECRET`) and Antigravity workspace deny hooks enforce human authority.
+- **Security.** It flags secrets and review check C3 prompts for security thinking, but it is not a full vulnerability scanner. Run dedicated tools.
 
 ## Residual risks and how to reduce them
 
