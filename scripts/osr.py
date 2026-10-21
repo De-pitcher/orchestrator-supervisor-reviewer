@@ -19,6 +19,7 @@ import importlib.util
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -476,6 +477,42 @@ def parse_card(tid):
     return card
 
 
+def is_verify_cmd_confirmed(v_cmd, cfg, led=None):
+    if cfg.get("allow_no_commands"):
+        return True
+    if led is None:
+        led = Ledger()
+    conf_cmds = []
+    for n, c in cfg.get("commands", {}).items():
+        if confirmed(cfg, led, n):
+            conf_cmds.append(c["cmd"].strip())
+    if not conf_cmds:
+        return True
+    v_clean = v_cmd.strip()
+    try:
+        v_tokens = shlex.split(v_clean, posix=False)
+    except Exception:
+        v_tokens = v_clean.split()
+    if not v_tokens:
+        return False
+    v_exe = v_tokens[0].strip('"\'>')
+    for cc in conf_cmds:
+        if v_clean == cc:
+            return True
+        try:
+            c_tokens = shlex.split(cc, posix=False)
+        except Exception:
+            c_tokens = cc.split()
+        if c_tokens:
+            c_exe = c_tokens[0].strip('"\'>')
+            if Path(v_exe).name.lower() == Path(c_exe).name.lower() or v_exe == c_exe:
+                if len(c_tokens) > 2 and c_tokens[1] == "-m":
+                    if len(v_tokens) > 2 and v_tokens[1] == "-m":
+                        return v_tokens[2] == c_tokens[2]
+                return True
+    return False
+
+
 def validate_card(tid, cfg, plan, strict_files=True):
     errs = []
     if not ai("tasks", tid + ".md").exists():
@@ -498,6 +535,8 @@ def validate_card(tid, cfg, plan, strict_files=True):
     for v in c["verify"]:
         if TRIVIAL_CMD.match(v):
             errs.append("%s: verify command '%s' cannot prove anything" % (tid, v))
+        elif not is_verify_cmd_confirmed(v, cfg):
+            errs.append("%s: verify command '%s' is not confirmed (must match a confirmed command in .ai/config.json)" % (tid, v))
     for h in CARD_HEADINGS:
         if h not in c["_heads"]:
             errs.append("%s: section '## %s' missing" % (tid, h.title()))
@@ -1178,12 +1217,22 @@ def cmd_start(a):
             if not e or e["seq"] < req.get("seq", 0) or not e["data"].get("ok"):
                 die("Triage said 'environment' fault: fix the environment, then run: osr env-check (must pass).")
     cur = walk_tree(cfg)
+    baseline = {}
+    for n in cfg.get("global_verify", []):
+        if n in cfg.get("commands", {}) and confirmed(cfg, led, n):
+            res = run_recorded(cfg["commands"][n]["cmd"], cfg, "%s-baseline-%s" % (tid, n))
+            baseline[n] = {"ok": res["ok"], "exit": res["exit"], "sha": res["output_sha"]}
+    for i, v in enumerate(card["verify"]):
+        if not TRIVIAL_CMD.match(v) and is_verify_cmd_confirmed(v, cfg, led):
+            res = run_recorded(v, cfg, "%s-baseline-task-%d" % (tid, i))
+            baseline["task_%d" % i] = {"cmd": v, "ok": res["ok"], "exit": res["exit"], "sha": res["output_sha"]}
+
     with LedgerLock(timeout=0.3):
         if not snap_path(tid).exists():
             snap_path(tid).write_text(json.dumps(cur), encoding="utf-8")
-        ts.update({"status": "in_progress", "attempts": ts["attempts"] + 1, "failures": 0, "model": a.model or "unknown", "input_hash": ih, "requires": None})
+        ts.update({"status": "in_progress", "attempts": ts["attempts"] + 1, "failures": 0, "model": a.model or "unknown", "input_hash": ih, "requires": None, "baseline": baseline})
         save_state(st)
-        led.append("start", tid, ts["attempts"], model=ts["model"], input_hash=ih)
+        led.append("start", tid, ts["attempts"], model=ts["model"], input_hash=ih, baseline=baseline)
     if JSON_MODE:
         emit_json({
             "ok": True,
@@ -1260,8 +1309,21 @@ def cmd_verify(a):
             print_check(r2)
         ok = False
     led.append("check", tid, ts["attempts"], ok=r2["ok"], fp=r2["fp"], flags=r2["flags"], unchecked=r2["refs"]["unchecked"][:30])
+    start_entry = led.latest("start", tid, ts["attempts"])
+    base = (start_entry.get("data") if start_entry else {}).get("baseline", {})
+    red_green = {}
+    for res in results:
+        cmd_name = res["name"]
+        prior = base.get(cmd_name)
+        if prior:
+            if not prior.get("ok") and res["ok"]:
+                red_green[cmd_name] = "transitioned_to_green"
+            elif prior.get("ok") and res["ok"]:
+                red_green[cmd_name] = "preserved_green"
+            else:
+                red_green[cmd_name] = "failing"
     clean_results = [{k: v for k, v in x.items() if k != "tail"} for x in results]
-    led.append("verify", tid, ts["attempts"], ok=ok, fp=r2["fp"], results=clean_results)
+    led.append("verify", tid, ts["attempts"], ok=ok, fp=r2["fp"], results=clean_results, red_green=red_green)
     if not ok:
         ts["failures"] += 1
         save_state(st)
@@ -1274,6 +1336,7 @@ def cmd_verify(a):
             "failures": ts["failures"],
             "max_failures": cfg["max_inner_failures"],
             "results": clean_results,
+            "red_green": red_green,
             "next": next_action()
         }, code=0 if ok else 2)
     print("\nVERIFY: %s" % ("PASS" if ok else "FAIL  (failures this attempt: %d/%d)" % (ts["failures"], cfg["max_inner_failures"])))

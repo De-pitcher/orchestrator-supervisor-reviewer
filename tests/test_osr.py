@@ -361,6 +361,35 @@ class OsrTests(unittest.TestCase):
         code, out = p.osr("start", "T1", "--model", "m")
         self.assertEqual(code, 0, out)
 
+    def test_verify_command_must_be_confirmed(self):
+        p = self.p
+        p.setup_ready()
+        # Task card with unconfirmed verify command
+        bad_card = CARD.replace('verify: "%s" -m unittest tests.test_calc -q' % sys.executable, 'verify: random-runner tests/')
+        p.write(".ai/tasks/T1.md", bad_card)
+        code, out = p.osr("task-check", "T1")
+        self.assertNotEqual(code, 0)
+        self.assertIn("confirmed", out.lower())
+
+    def test_red_green_baseline_recorded_at_start(self):
+        p = self.p
+        p.setup_ready()
+        # When start runs, verify that baseline is captured
+        code, out = p.osr("start", "T1", "--model", "m")
+        self.assertEqual(code, 0, out)
+        led = [json.loads(line) for line in p.read(".ai/ledger.jsonl").splitlines()]
+        start_entry = [e for e in led if e["type"] == "start"][-1]
+        self.assertIn("baseline", start_entry["data"])
+
+    def test_cheat_verify_true_rejected(self):
+        p = self.p
+        p.setup_ready()
+        cheat_card = CARD.replace('verify: "%s" -m unittest tests.test_calc -q' % sys.executable, 'verify: true')
+        p.write(".ai/tasks/T1.md", cheat_card)
+        code, out = p.osr("task-check", "T1")
+        self.assertNotEqual(code, 0)
+        self.assertIn("cannot prove anything", out)
+
 
 if __name__ == "__main__":
     unittest.main()

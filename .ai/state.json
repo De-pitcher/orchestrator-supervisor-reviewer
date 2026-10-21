@@ -11,6 +11,17 @@
       "blocked": null,
       "requires": null,
       "extra_attempts": 0
+    },
+    "T2": {
+      "status": "done",
+      "attempts": 1,
+      "failures": 0,
+      "model": "gemini-3.8-flash",
+      "input_hash": "59224176944a8120a46884ea422cdb7bfafbb9dec21af2d167d4a2a28fe3353b",
+      "triaged_attempt": 0,
+      "blocked": null,
+      "requires": null,
+      "extra_attempts": 0
     }
   },
   "waivers": [],
