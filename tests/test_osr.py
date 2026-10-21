@@ -9,6 +9,7 @@ import unittest
 from pathlib import Path
 
 OSR = str(Path(__file__).resolve().parent.parent / "scripts" / "osr.py")
+ROOT_DIR = Path(__file__).resolve().parent.parent
 
 PLAN = """# Plan: calc
 
@@ -116,6 +117,13 @@ class Project:
     def implement(self):
         self.write("src/calc.py", GOOD_CODE)
         self.write("tests/test_calc.py", GOOD_TEST)
+
+    def git_init(self):
+        subprocess.run(["git", "init"], cwd=str(self.dir), capture_output=True)
+        subprocess.run(["git", "config", "user.name", "Test"], cwd=str(self.dir), capture_output=True)
+        subprocess.run(["git", "config", "user.email", "test@test.com"], cwd=str(self.dir), capture_output=True)
+        subprocess.run(["git", "add", "."], cwd=str(self.dir), capture_output=True)
+        subprocess.run(["git", "commit", "-m", "init"], cwd=str(self.dir), capture_output=True)
 
     def cleanup(self):
         shutil.rmtree(self.dir, ignore_errors=True)
@@ -326,6 +334,268 @@ class OsrTests(unittest.TestCase):
         self.assertIn("start T1", p.osr("next")[1])
         p.osr("start", "T1", "--model", "m")
         self.assertIn("verify T1", p.osr("next")[1])
+
+    def test_json_output_and_exit_codes(self):
+        p = self.p
+        p.setup_ready()
+        # Test osr next with --json
+        code, out = p.osr("next", "--json")
+        self.assertEqual(code, 0, out)
+        data = json.loads(out)
+        self.assertTrue(data.get("ok"))
+        self.assertIn("action", data)
+        self.assertEqual(data["action"], "osr start T1 --model <your-model-name>")
+
+        # Test gate rejection with --json: verify before implementing returns exit code 2
+        p.osr("start", "T1", "--model", "m")
+        code, out = p.osr("verify", "T1", "--json")
+        self.assertEqual(code, 2, "Gate failure should return exit code 2")
+        data = json.loads(out)
+        self.assertFalse(data.get("ok"))
+        self.assertEqual(data.get("exit_code"), 2)
+
+    def test_ledger_locking_concurrency(self):
+        p = self.p
+        p.setup_ready()
+        lock_file = p.dir / ".ai" / ".ledger.lock"
+        # Simulate active lock held by another process
+        lock_file.write_text("locked", encoding="utf-8")
+        code, out = p.osr("start", "T1", "--model", "m")
+        # Should detect that lock is held
+        self.assertNotEqual(code, 0)
+        self.assertIn("lock", out.lower())
+        # Removing lock allows operation to succeed
+        lock_file.unlink()
+        code, out = p.osr("start", "T1", "--model", "m")
+        self.assertEqual(code, 0, out)
+
+    def test_verify_command_must_be_confirmed(self):
+        p = self.p
+        p.setup_ready()
+        # Task card with unconfirmed verify command
+        bad_card = CARD.replace('verify: "%s" -m unittest tests.test_calc -q' % sys.executable, 'verify: random-runner tests/')
+        p.write(".ai/tasks/T1.md", bad_card)
+        code, out = p.osr("task-check", "T1")
+        self.assertNotEqual(code, 0)
+        self.assertIn("confirmed", out.lower())
+
+    def test_red_green_baseline_recorded_at_start(self):
+        p = self.p
+        p.setup_ready()
+        # When start runs, verify that baseline is captured
+        code, out = p.osr("start", "T1", "--model", "m")
+        self.assertEqual(code, 0, out)
+        led = [json.loads(line) for line in p.read(".ai/ledger.jsonl").splitlines()]
+        start_entry = [e for e in led if e["type"] == "start"][-1]
+        self.assertIn("baseline", start_entry["data"])
+
+    def test_cheat_verify_true_rejected(self):
+        p = self.p
+        p.setup_ready()
+        cheat_card = CARD.replace('verify: "%s" -m unittest tests.test_calc -q' % sys.executable, 'verify: true')
+        p.write(".ai/tasks/T1.md", cheat_card)
+        code, out = p.osr("task-check", "T1")
+        self.assertNotEqual(code, 0)
+        self.assertIn("cannot prove anything", out)
+
+    def test_criteria_test_traceability_blocks_done_when_missing(self):
+        p = self.p
+        p.setup_ready()
+        custom_plan = PLAN.replace("- AC: add(2,3) returns 5 and add(-1,1) returns 0", "- AC: [test_special] add(2,3) returns 5 and add(-1,1) returns 0")
+        p.write(".ai/PLAN.md", custom_plan)
+        p.osr("approve-plan", "--by", "human")
+        p.osr("start", "T1", "--model", "m")
+        p.implement()
+        code, out = p.osr("verify", "T1")
+        self.assertEqual(code, 0, out)
+        p.write(".ai/reviews/T1.spec.md", SPEC_OK)
+        p.osr("review", "T1", "spec", "--reviewer", "model-b")
+        p.write(".ai/reviews/T1.quality.md", QUALITY_OK)
+        p.osr("review", "T1", "quality", "--reviewer", "model-b")
+        code, out = p.osr("done", "T1")
+        self.assertNotEqual(code, 0)
+        self.assertIn("test_special", out)
+
+    def test_config_tampering_voids_plan_approval(self):
+        p = self.p
+        p.setup_ready()
+        cfg = json.loads(p.read(".ai/config.json"))
+        cfg["max_attempts"] = 99
+        p.write(".ai/config.json", json.dumps(cfg))
+        code, out = p.osr("start", "T1", "--model", "m")
+        self.assertNotEqual(code, 0)
+        self.assertIn("config", out.lower())
+        self.assertIn("approval", out.lower())
+
+    def test_approval_secret_enforcement(self):
+        p = self.p
+        p.setup_ready(approve=False)
+        cfg = json.loads(p.read(".ai/config.json"))
+        import hashlib
+        cfg["approval_secret_sha"] = hashlib.sha256(b"topsecret123").hexdigest()
+        p.write(".ai/config.json", json.dumps(cfg))
+        code, out = p.osr("approve-plan", "--by", "human")
+        self.assertNotEqual(code, 0)
+        self.assertIn("secret", out.lower())
+        code, out = p.osr("approve-plan", "--by", "human", "--secret", "wrongsecret")
+        self.assertNotEqual(code, 0)
+        self.assertIn("secret", out.lower())
+        code, out = p.osr("approve-plan", "--by", "human", "--secret", "topsecret123")
+        self.assertEqual(code, 0, out)
+
+    def test_anchor_verification_detects_ledger_rollback(self):
+        p = self.p
+        p.setup_ready()
+        code, out = p.osr("anchor")
+        self.assertEqual(code, 0, out)
+        anchor_file = p.dir / ".osr-anchor"
+        self.assertTrue(anchor_file.exists())
+        code, out = p.osr("ledger-verify")
+        self.assertEqual(code, 0, out)
+        lines = p.read(".ai/ledger.jsonl").splitlines()
+        p.write(".ai/ledger.jsonl", "\n".join(lines[:-1]) + "\n")
+        code, out = p.osr("ledger-verify")
+        self.assertNotEqual(code, 0)
+        self.assertIn("anchor", out.lower())
+
+    def test_antigravity_pre_tool_hook_blocks_out_of_scope_edits(self):
+        p = self.p
+        p.setup_ready()
+        p.osr("start", "T1", "--model", "test-model")
+        hook_script = ROOT_DIR / "integrations" / "antigravity" / "pre_tool.py"
+        self.assertTrue(hook_script.exists(), "integrations/antigravity/pre_tool.py must exist")
+
+        payload = {
+            "toolCall": {"name": "edit_file", "args": {"Path": str(p.dir / "src" / "other.py")}},
+            "workspacePaths": [str(p.dir)],
+        }
+        res = subprocess.run([sys.executable, str(hook_script)], input=json.dumps(payload), capture_output=True, text=True, cwd=str(p.dir))
+        self.assertEqual(res.returncode, 0)
+        data = json.loads(res.stdout)
+        self.assertEqual(data.get("decision"), "deny")
+        self.assertIn("scope", data.get("reason", "").lower())
+
+        payload = {
+            "toolCall": {"name": "edit_file", "args": {"Path": str(p.dir / "src" / "calc.py")}},
+            "workspacePaths": [str(p.dir)],
+        }
+        res = subprocess.run([sys.executable, str(hook_script)], input=json.dumps(payload), capture_output=True, text=True, cwd=str(p.dir))
+        self.assertEqual(res.returncode, 0)
+        data = json.loads(res.stdout)
+        self.assertEqual(data.get("decision"), "allow")
+
+    def test_antigravity_pre_tool_hook_blocks_human_commands(self):
+        p = self.p
+        p.setup_ready()
+        hook_script = ROOT_DIR / "integrations" / "antigravity" / "pre_tool.py"
+        self.assertTrue(hook_script.exists())
+
+        payload = {
+            "toolCall": {"name": "run_command", "args": {"CommandLine": "python scripts/osr.py approve-plan --by bot"}},
+            "workspacePaths": [str(p.dir)],
+        }
+        res = subprocess.run([sys.executable, str(hook_script)], input=json.dumps(payload), capture_output=True, text=True, cwd=str(p.dir))
+        self.assertEqual(res.returncode, 0)
+        data = json.loads(res.stdout)
+        self.assertEqual(data.get("decision"), "deny")
+        self.assertIn("human", data.get("reason", "").lower())
+
+    def test_antigravity_stop_hook_forces_continuation_when_tasks_pending(self):
+        p = self.p
+        p.setup_ready()
+        p.osr("start", "T1", "--model", "test-model")
+        stop_script = ROOT_DIR / "integrations" / "antigravity" / "stop_hook.py"
+        self.assertTrue(stop_script.exists(), "integrations/antigravity/stop_hook.py must exist")
+
+        payload = {
+            "terminationReason": "NO_TOOL_CALL",
+            "workspacePaths": [str(p.dir)],
+        }
+        res = subprocess.run([sys.executable, str(stop_script)], input=json.dumps(payload), capture_output=True, text=True, cwd=str(p.dir))
+        self.assertEqual(res.returncode, 0)
+        data = json.loads(res.stdout)
+        self.assertEqual(data.get("terminationBehavior"), "force_continue")
+
+    def test_git_pre_commit_hook(self):
+        p = self.p
+        p.setup_ready()
+        pre_commit_script = ROOT_DIR / "integrations" / "git" / "pre_commit.py"
+        self.assertTrue(pre_commit_script.exists())
+        res = subprocess.run([sys.executable, str(pre_commit_script)], capture_output=True, text=True, cwd=str(p.dir))
+        self.assertEqual(res.returncode, 0)
+
+        p.write(".ai/ledger.jsonl", "corrupted json line\n")
+        res = subprocess.run([sys.executable, str(pre_commit_script)], capture_output=True, text=True, cwd=str(p.dir))
+        self.assertNotEqual(res.returncode, 0)
+
+    def test_review_pack_bundles_diff_card_criteria_without_builder_logs(self):
+        p = self.p
+        p.setup_ready()
+        p.osr("start", "T1", "--model", "secret-builder-model-v99")
+        p.implement()
+        p.osr("verify", "T1")
+        code, out = p.osr("review-pack", "T1")
+        self.assertEqual(code, 0, out)
+        self.assertIn("R1", out)
+        self.assertIn("add(2,3)", out)
+        self.assertIn("diff", out.lower())
+        self.assertNotIn("secret-builder-model-v99", out)
+
+    def test_quick_path_verifies_without_task_cards(self):
+        p = self.p
+        p.setup_ready()
+        p.git_init()
+        p.write("src/calc.py", GOOD_CODE)
+        p.write("tests/test_calc.py", GOOD_TEST)
+        cmd = f'"{sys.executable}" -m unittest tests.test_calc -q'
+        code, out = p.osr("quick", "--verify", cmd, "--allowed", "src/calc.py, tests/test_calc.py")
+        self.assertEqual(code, 0, out)
+        self.assertIn("PASS", out)
+
+    def test_quick_path_rejects_scope_violation(self):
+        p = self.p
+        p.setup_ready()
+        p.git_init()
+        p.write("src/calc.py", GOOD_CODE)
+        p.write("src/unauthorized.py", "# out of scope\n")
+        cmd = f'"{sys.executable}" -m unittest discover -s tests -q'
+        code, out = p.osr("quick", "--verify", cmd, "--allowed", "src/calc.py")
+        self.assertNotEqual(code, 0)
+        self.assertIn("scope", out.lower())
+
+    def test_pluggable_checkers_in_config_block_on_failure(self):
+        p = self.p
+        p.setup_ready()
+        # Add pluggable checker to config before starting
+        cfg_path = p.dir / ".ai" / "config.json"
+        cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
+        cfg["checkers"] = [
+            {
+                "name": "custom_linter",
+                "cmd": f'"{sys.executable}" -c "import sys, json; sys.stdout.write(json.dumps({{\\"ok\\": False, \\"flags\\": [\\"custom_violation\\"], \\"errors\\": [\\"Rule 42 failed\\"]}})); sys.exit(1)"'
+            }
+        ]
+        cfg_path.write_text(json.dumps(cfg, indent=2), encoding="utf-8")
+        # Re-approve plan to lock in modified config hash
+        code, out = p.osr("approve-plan", "--by", "human")
+        self.assertEqual(code, 0, out)
+        p.osr("start", "T1", "--model", "gemini-flash")
+        p.implement()
+        code, out = p.osr("check", "T1")
+        self.assertNotEqual(code, 0)
+        self.assertIn("custom_violation", out)
+
+    def test_adversarial_eval_suite_benchmarks_catch_rate(self):
+        # Must import and run evals.eval_suite benchmark
+        from evals.eval_suite import run_adversarial_benchmark
+        report = run_adversarial_benchmark()
+        self.assertIn("catch_rate", report)
+        self.assertEqual(report["catch_rate"], 1.0)
+        self.assertEqual(report["false_positive_rate"], 0.0)
+        self.assertGreaterEqual(report["total_cheats_tested"], 6)
+
+
+
 
 
 if __name__ == "__main__":

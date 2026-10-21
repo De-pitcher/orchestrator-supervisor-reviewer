@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "max_attempts": 3,
+  "max_inner_failures": 2,
+  "task_card_max_lines": 150,
+  "context_budget_lines": 1500,
+  "command_timeout_seconds": 600,
+  "max_scan_bytes": 2000000,
+  "max_files": 30000,
+  "require_distinct_reviewer": false,
+  "allow_no_commands": false,
+  "allow_broad_scope": false,
+  "human_only_flags": [
+    "tests-weakened",
+    "skips-added",
+    "secret"
+  ],
+  "env_smoke": [
+    "build",
+    "typecheck",
+    "lint"
+  ],
+  "ignore": [
+    ".git",
+    ".ai",
+    "node_modules",
+    "__pycache__",
+    ".pytest_cache",
+    ".mypy_cache",
+    ".ruff_cache",
+    "venv",
+    ".venv",
+    "env",
+    "dist",
+    "build",
+    "target",
+    ".next",
+    ".nuxt",
+    ".cache",
+    "coverage",
+    ".idea",
+    ".vscode",
+    ".DS_Store",
+    "*.pyc",
+    "*.pyo",
+    "*.log",
+    ".gradle",
+    "bin",
+    "obj",
+    ".tox",
+    ".terraform"
+  ],
+  "commands": {
+    "test": {
+      "cmd": "python -m unittest discover -s tests -v",
+      "verified": true
+    }
+  },
+  "global_verify": [
+    "test"
+  ],
+  "extra_placeholder_patterns": []
+}

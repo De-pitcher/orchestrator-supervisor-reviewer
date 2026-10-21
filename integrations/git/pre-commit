@@ -1,0 +1,2 @@
+#!/bin/sh
+python integrations/git/pre_commit.py

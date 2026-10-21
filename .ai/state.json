@@ -1,0 +1,149 @@
+{
+  "plan_hash": "992cc1023d385f50d2d2ce60001eaf041b873c0af45131927489bf777ab878be",
+  "tasks": {
+    "T1": {
+      "status": "done",
+      "attempts": 1,
+      "failures": 0,
+      "model": "gemini-3.8-flash",
+      "input_hash": "502f4af029a0b01bee2fab169329c4cdb05f7664924a4a7f7a7a03c97b308c7d",
+      "triaged_attempt": 0,
+      "blocked": null,
+      "requires": null,
+      "extra_attempts": 0
+    },
+    "T2": {
+      "status": "done",
+      "attempts": 1,
+      "failures": 0,
+      "model": "gemini-3.8-flash",
+      "input_hash": "59224176944a8120a46884ea422cdb7bfafbb9dec21af2d167d4a2a28fe3353b",
+      "triaged_attempt": 0,
+      "blocked": null,
+      "requires": null,
+      "extra_attempts": 0
+    },
+    "T3": {
+      "status": "done",
+      "attempts": 1,
+      "failures": 0,
+      "model": "gemini-3.8-flash",
+      "input_hash": "ac96a684d48d87b456a4baeba39b59b0769f94c759dd9259a81218eabec36251",
+      "triaged_attempt": 0,
+      "blocked": null,
+      "requires": null,
+      "extra_attempts": 0,
+      "baseline": {
+        "test": {
+          "ok": true,
+          "exit": 0,
+          "sha": "61ea537ab9c62fd041105630ae4f87f6233cc4e1a3d0d7bf87da8109945bd6f3"
+        },
+        "task_0": {
+          "cmd": "python -m unittest discover -s tests -v",
+          "ok": true,
+          "exit": 0,
+          "sha": "dfaf1b9e369bd938558dcc7812dce79c571b94eb0fe116712612c173e49fa75f"
+        }
+      }
+    },
+    "T4": {
+      "status": "done",
+      "attempts": 1,
+      "failures": 0,
+      "model": "gemini-3.8-flash",
+      "input_hash": "085fa02bd677713c49d3f150b26762b2bbd3843c7863849220bf3f7e084a2aab",
+      "triaged_attempt": 0,
+      "blocked": null,
+      "requires": null,
+      "extra_attempts": 0,
+      "baseline": {
+        "test": {
+          "ok": true,
+          "exit": 0,
+          "sha": "fee85e59ddc643373d8cbb71b914fc9230b06a179427518e1f6240ccb7c90b6d"
+        },
+        "task_0": {
+          "cmd": "python -m unittest discover -s tests -v",
+          "ok": true,
+          "exit": 0,
+          "sha": "e6656b7c9a1711be3e7a5de21a41b474261bbd18653b7ecb9fc6ff553a075e25"
+        }
+      }
+    },
+    "T5": {
+      "status": "done",
+      "attempts": 1,
+      "failures": 0,
+      "model": "gemini-3.8-flash",
+      "input_hash": "6a4c14772130db4d8cf616f9c6451006139571ffe957269d2ecca868b1b02a30",
+      "triaged_attempt": 0,
+      "blocked": null,
+      "requires": null,
+      "extra_attempts": 0,
+      "baseline": {
+        "test": {
+          "ok": true,
+          "exit": 0,
+          "sha": "0b822bb9a4168a84eb9e470c4f6f0eb856b0528c4e1468dfabdc33cd2e1a287c"
+        },
+        "task_0": {
+          "cmd": "python -m unittest discover -s tests -v",
+          "ok": true,
+          "exit": 0,
+          "sha": "f582387ca73095d9355f3e7ceb562d10cec17780568ab9d0e356bdc07dcb50ed"
+        }
+      }
+    },
+    "T6": {
+      "status": "done",
+      "attempts": 1,
+      "failures": 0,
+      "model": "gemini-3.8-flash",
+      "input_hash": "595d72e16061d5149457ff9ad619dad98e4657de0670518e838ed17b25e4c344",
+      "triaged_attempt": 0,
+      "blocked": null,
+      "requires": null,
+      "extra_attempts": 0,
+      "baseline": {
+        "test": {
+          "ok": true,
+          "exit": 0,
+          "sha": "d79f4e977ccdeb744af78b138c811a997e477b2dba907b8205c6589cfc419bd2"
+        },
+        "task_0": {
+          "cmd": "python -m unittest discover -s tests -v",
+          "ok": true,
+          "exit": 0,
+          "sha": "f41d427a1983632f594f518731e7ae30a9771ad7537cd79a66f529c1962e35aa"
+        }
+      }
+    },
+    "T7": {
+      "status": "done",
+      "attempts": 1,
+      "failures": 0,
+      "model": "gemini-3.8-flash",
+      "input_hash": "8a29cba9130aa58840144bcce9965e216e83b74e581926c41e4a29dbedf91d38",
+      "triaged_attempt": 0,
+      "blocked": null,
+      "requires": null,
+      "extra_attempts": 0,
+      "baseline": {
+        "test": {
+          "ok": true,
+          "exit": 0,
+          "sha": "33f6d647fc6c93e539427848d776fed5344a4a4ffa9b7dd89d8c289242827c1a"
+        },
+        "task_0": {
+          "cmd": "python -m unittest discover -s tests -v",
+          "ok": true,
+          "exit": 0,
+          "sha": "4e30d2be790d6b4bdf27634cc767a1e36a51272775dc8816b44d47f812d5feec"
+        }
+      }
+    }
+  },
+  "waivers": [],
+  "signoffs": {}
+}

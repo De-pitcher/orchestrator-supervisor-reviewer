@@ -13,24 +13,32 @@ from __future__ import annotations
 
 import argparse
 import ast
+import difflib
 import fnmatch
 import hashlib
 import importlib.util
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
 import time
 from pathlib import Path
 
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 ROOT = Path.cwd()
 SCRIPT_DIR = Path(__file__).resolve().parent
 ASSETS = SCRIPT_DIR.parent / "assets"
 ZERO = "0" * 64
 LAYERS = ["spec", "plan", "prompt", "context", "environment", "model", "implementation"]
+
+EXIT_OK = 0
+EXIT_USER_ERR = 1
+EXIT_GATE_FAIL = 2
+EXIT_BLOCKED = 3
+EXIT_INTEGRITY = 4
 
 DEFAULT_CFG = {
     "version": 1,
@@ -55,6 +63,7 @@ DEFAULT_CFG = {
     "commands": {},
     "global_verify": [],
     "extra_placeholder_patterns": [],
+    "checkers": [],
 }
 
 PLACEHOLDER_PATTERNS = [
@@ -126,9 +135,72 @@ def sha_text(s):
     return hashlib.sha256(s.encode("utf-8", "replace")).hexdigest()
 
 
+def join_arg(val):
+    if isinstance(val, (list, tuple)):
+        return " ".join(val)
+    return str(val) if val is not None else ""
+
+
+JSON_MODE = False
+
+
+def emit_json(payload, code=0):
+    if "exit_code" not in payload:
+        payload["exit_code"] = code
+    if "ok" not in payload:
+        payload["ok"] = (code == 0)
+    print(json.dumps(payload, indent=2))
+    sys.exit(code)
+
+
 def die(msg, code=1):
+    if JSON_MODE:
+        status_map = {1: "error", 2: "gate_failed", 3: "blocked", 4: "integrity_violation"}
+        emit_json({"ok": False, "exit_code": code, "error": msg, "status": status_map.get(code, "error")}, code=code)
     print(msg, file=sys.stderr)
     sys.exit(code)
+
+
+_LOCK_DEPTH = 0
+
+
+class LedgerLock:
+    def __init__(self, timeout=0.3):
+        self.lock = ai(".ledger.lock")
+        self.timeout = timeout
+        self.acquired = False
+
+    def __enter__(self):
+        global _LOCK_DEPTH
+        if _LOCK_DEPTH > 0:
+            _LOCK_DEPTH += 1
+            return self
+        start = time.time()
+        while True:
+            try:
+                self.lock.parent.mkdir(parents=True, exist_ok=True)
+                fd = os.open(str(self.lock), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+                os.write(fd, ("pid=%d ts=%f\n" % (os.getpid(), time.time())).encode("utf-8"))
+                os.close(fd)
+                self.acquired = True
+                _LOCK_DEPTH = 1
+                return self
+            except FileExistsError:
+                if (time.time() - start) >= self.timeout:
+                    die("Ledger lock is held (%s). Another process is writing or a previous run crashed." % self.lock, code=1)
+                time.sleep(0.05)
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        global _LOCK_DEPTH
+        if _LOCK_DEPTH > 1:
+            _LOCK_DEPTH -= 1
+            return
+        _LOCK_DEPTH = 0
+        if self.acquired and self.lock.exists():
+            try:
+                self.lock.unlink()
+            except OSError:
+                pass
 
 
 def load_cfg():
@@ -144,10 +216,40 @@ def save_cfg(cfg):
     ai("config.json").write_text(json.dumps(cfg, indent=2) + "\n", encoding="utf-8")
 
 
+def sha_config():
+    p = ai("config.json")
+    if not p.exists():
+        return ZERO
+    try:
+        cfg_obj = json.loads(p.read_text(encoding="utf-8"))
+        return sha_text(json.dumps(cfg_obj, sort_keys=True))
+    except Exception:
+        return sha_text(p.read_text(encoding="utf-8"))
+
+
+def ensure_plan_and_config_approved(st):
+    if st.get("plan_hash") != sha_text(ai("PLAN.md").read_text(encoding="utf-8")):
+        die("PLAN.md is not approved or changed since approval. The human must run: osr approve-plan --by <name>")
+    if st.get("config_hash") and st["config_hash"] != sha_config():
+        die("config.json has changed since plan approval. The human must re-run approve-plan to approve the updated configuration.", code=EXIT_INTEGRITY)
+
+
+def check_approval_secret(cfg, a):
+    expected_sha = cfg.get("approval_secret_sha")
+    if not expected_sha:
+        return
+    provided = getattr(a, "secret", None) or os.environ.get("OSR_APPROVAL_SECRET")
+    if not provided:
+        die("An approval secret is configured in config.json. You must provide --secret <secret> or set OSR_APPROVAL_SECRET.", code=EXIT_USER_ERR)
+    h = hashlib.sha256(provided.encode("utf-8")).hexdigest()
+    if h != expected_sha:
+        die("Invalid approval secret provided.", code=EXIT_USER_ERR)
+
+
 def load_state():
     p = ai("state.json")
     if not p.exists():
-        return {"plan_hash": None, "tasks": {}, "waivers": [], "signoffs": {}}
+        return {"plan_hash": None, "config_hash": None, "tasks": {}, "waivers": [], "signoffs": {}}
     return json.loads(p.read_text(encoding="utf-8"))
 
 
@@ -175,25 +277,51 @@ class Ledger:
             return []
         return [json.loads(l) for l in self.path.read_text(encoding="utf-8").splitlines() if l.strip()]
 
-    def verify_chain(self):
+    def verify_chain(self, anchor_path=None):
         prev = ZERO
-        for i, e in enumerate(self.entries()):
+        entries = self.entries()
+        for i, e in enumerate(entries):
             body = {k: v for k, v in e.items() if k != "hash"}
             if e.get("prev") != prev:
                 return False, "ledger entry %d: broken chain" % (i + 1)
             if sha_text(prev + json.dumps(body, sort_keys=True)) != e.get("hash"):
                 return False, "ledger entry %d: content was modified" % (i + 1)
             prev = e["hash"]
+
+        target_anchor = anchor_path if anchor_path is not None else (ROOT / ".osr-anchor")
+        if anchor_path is not None and not target_anchor.exists():
+            return False, "ledger anchor file does not exist: %s" % target_anchor
+
+        if target_anchor.exists():
+            try:
+                raw = target_anchor.read_text(encoding="utf-8").strip()
+                if raw.startswith("{"):
+                    ainfo = json.loads(raw)
+                    aseq = ainfo.get("seq")
+                    ahash = ainfo.get("head_hash")
+                else:
+                    aseq = None
+                    ahash = raw
+                if aseq is not None:
+                    if len(entries) < aseq or entries[aseq - 1]["hash"] != ahash:
+                        return False, "ledger anchor mismatch: rollback detected (expected seq %s with hash %s)" % (aseq, ahash)
+                elif ahash:
+                    if not any(e["hash"] == ahash for e in entries):
+                        return False, "ledger anchor mismatch: anchored hash %s missing from ledger" % ahash
+            except Exception as ex:
+                return False, "ledger anchor verification failed: %s" % ex
+
         return True, "ok"
 
     def append(self, typ, task=None, attempt=None, **data):
-        es = self.entries()
-        prev = es[-1]["hash"] if es else ZERO
-        body = {"seq": len(es) + 1, "ts": now(), "type": typ, "task": task, "attempt": attempt, "data": data, "prev": prev}
-        body["hash"] = sha_text(prev + json.dumps(body, sort_keys=True))
-        with open(self.path, "a", encoding="utf-8") as f:
-            f.write(json.dumps(body) + "\n")
-        return body
+        with LedgerLock(timeout=0.3):
+            es = self.entries()
+            prev = es[-1]["hash"] if es else ZERO
+            body = {"seq": len(es) + 1, "ts": now(), "type": typ, "task": task, "attempt": attempt, "data": data, "prev": prev}
+            body["hash"] = sha_text(prev + json.dumps(body, sort_keys=True))
+            with open(self.path, "a", encoding="utf-8") as f:
+                f.write(json.dumps(body) + "\n")
+            return body
 
     def latest(self, typ, task=None, attempt=None, stage=None):
         for e in reversed(self.entries()):
@@ -216,7 +344,7 @@ def ctx(require_chain=True):
     if require_chain:
         ok, msg = led.verify_chain()
         if not ok:
-            die("LEDGER INTEGRITY FAILURE: %s\nThe ledger is append-only and written only by osr. Stop and tell the human." % msg)
+            die("LEDGER INTEGRITY FAILURE: %s\nThe ledger is append-only and written only by osr. Stop and tell the human." % msg, code=4)
     return cfg, st, led
 
 
@@ -412,6 +540,42 @@ def parse_card(tid):
     return card
 
 
+def is_verify_cmd_confirmed(v_cmd, cfg, led=None):
+    if cfg.get("allow_no_commands"):
+        return True
+    if led is None:
+        led = Ledger()
+    conf_cmds = []
+    for n, c in cfg.get("commands", {}).items():
+        if confirmed(cfg, led, n):
+            conf_cmds.append(c["cmd"].strip())
+    if not conf_cmds:
+        return True
+    v_clean = v_cmd.strip()
+    try:
+        v_tokens = shlex.split(v_clean, posix=False)
+    except Exception:
+        v_tokens = v_clean.split()
+    if not v_tokens:
+        return False
+    v_exe = v_tokens[0].strip('"\'>')
+    for cc in conf_cmds:
+        if v_clean == cc:
+            return True
+        try:
+            c_tokens = shlex.split(cc, posix=False)
+        except Exception:
+            c_tokens = cc.split()
+        if c_tokens:
+            c_exe = c_tokens[0].strip('"\'>')
+            if Path(v_exe).name.lower() == Path(c_exe).name.lower() or v_exe == c_exe:
+                if len(c_tokens) > 2 and c_tokens[1] == "-m":
+                    if len(v_tokens) > 2 and v_tokens[1] == "-m":
+                        return v_tokens[2] == c_tokens[2]
+                return True
+    return False
+
+
 def validate_card(tid, cfg, plan, strict_files=True):
     errs = []
     if not ai("tasks", tid + ".md").exists():
@@ -434,6 +598,8 @@ def validate_card(tid, cfg, plan, strict_files=True):
     for v in c["verify"]:
         if TRIVIAL_CMD.match(v):
             errs.append("%s: verify command '%s' cannot prove anything" % (tid, v))
+        elif not is_verify_cmd_confirmed(v, cfg):
+            errs.append("%s: verify command '%s' is not confirmed (must match a confirmed command in .ai/config.json)" % (tid, v))
     for h in CARD_HEADINGS:
         if h not in c["_heads"]:
             errs.append("%s: section '## %s' missing" % (tid, h.title()))
@@ -494,9 +660,10 @@ def run_recorded(cmd, cfg, label):
     code, text, secs, to = run_cmd(cmd, cfg)
     suspect = bool(NO_TESTS.search(text)) and code == 0
     log = save_log(0, label, text)
-    print("\n$ %s\n%s\n[exit %s%s | %ss | log .ai/logs/%s]" % (cmd, tail(text), code, " TIMEOUT" if to else "", secs, log))
-    if suspect:
-        print("SUSPECT: exit 0 but output says no tests ran. Treated as FAILURE.")
+    if not JSON_MODE:
+        print("\n$ %s\n%s\n[exit %s%s | %ss | log .ai/logs/%s]" % (cmd, tail(text), code, " TIMEOUT" if to else "", secs, log))
+        if suspect:
+            print("SUSPECT: exit 0 but output says no tests ran. Treated as FAILURE.")
     return {
         "cmd": cmd, "exit": code, "timeout": to, "suspect": suspect, "secs": secs,
         "output_sha": sha_text(text), "tail": tail(text, 15)[-1500:], "log": log,
@@ -672,12 +839,51 @@ def run_check(cfg, st, tid, card, snap, cur):
             if new.get("skips", 0) > old.get("skips", 0):
                 flags.append(("skips-added:%s" % p, "skip/only/xfail marker added"))
     waived = {w["flag"] for w in st["waivers"] if w["task"] == tid}
+    checker_errors = []
+    for c in cfg.get("checkers", []):
+        c_name = c.get("name", "checker")
+        c_cmd = c.get("cmd")
+        if not c_cmd:
+            continue
+        try:
+            res = subprocess.run(
+                c_cmd, shell=True, capture_output=True, text=True,
+                cwd=str(ROOT), timeout=c.get("timeout", cfg.get("command_timeout_seconds", 60))
+            )
+            out_text = (res.stdout or "") + (res.stderr or "")
+            parsed_json = None
+            try:
+                stripped = (res.stdout or "").strip()
+                if stripped.startswith("{") and stripped.endswith("}"):
+                    parsed_json = json.loads(stripped)
+            except Exception:
+                pass
+
+            c_ok = (res.returncode == 0)
+            if parsed_json and isinstance(parsed_json, dict):
+                if parsed_json.get("ok") is False or parsed_json.get("status") in ("fail", "error"):
+                    c_ok = False
+                for fl in parsed_json.get("flags", []):
+                    flags.append((fl, "pluggable checker '%s' flag" % c_name))
+                for err in parsed_json.get("errors", []):
+                    checker_errors.append("%s: %s" % (c_name, err))
+
+            if not c_ok:
+                if not any(f[0].startswith(c_name) or (parsed_json and f[0] in parsed_json.get("flags", [])) for f in flags):
+                    flags.append(("checker-failed:%s" % c_name, "pluggable checker '%s' failed with exit code %s" % (c_name, res.returncode)))
+                if out_text and not checker_errors:
+                    checker_errors.append("%s: %s" % (c_name, out_text.strip()[:200]))
+        except Exception as ex:
+            flags.append(("checker-error:%s" % c_name, str(ex)))
+            checker_errors.append("%s: exception %s" % (c_name, ex))
+
     unwaived = [(f, m) for f, m in flags if f not in waived]
     refs = check_refs(ch)
-    ok = not viol and not unwaived and not refs["unresolved"] and not refs["syntax"]
+    ok = not viol and not unwaived and not refs["unresolved"] and not refs["syntax"] and not checker_errors
     return {
         "ok": ok, "fp": fp, "changed": ch, "violations": viol, "flags": [f for f, _ in flags],
         "unwaived": unwaived, "waived": sorted(f for f, _ in flags if f in waived), "refs": refs,
+        "checker_errors": checker_errors,
     }
 
 
@@ -689,6 +895,8 @@ def print_check(r):
         print("SCOPE VIOLATION: %s" % v)
     for f, m in r["unwaived"]:
         print("FLAG: %s  (%s)\n  waive only with a real reason: osr waive <task> --flag \"%s\" --reason \"...\"" % (f, m, f))
+    for err in r.get("checker_errors", []):
+        print("CHECKER ERROR: %s" % err)
     for u in r["refs"]["unresolved"]:
         print("UNRESOLVED REFERENCE: %s" % u)
     for u in r["refs"]["syntax"]:
@@ -824,6 +1032,35 @@ def validate_quality_review(text):
     return errs, items, derived
 
 
+def extract_passed_tests(text):
+    passed = set()
+    for m in re.finditer(r"^([a-zA-Z0-9_.:-]+)(?:\s*\([^)]*\))?\s*\.\.\.\s*ok\b", text, re.M):
+        passed.add(m.group(1).split(".")[-1])
+        passed.add(m.group(1))
+    for m in re.finditer(r"::([a-zA-Z0-9_.:-]+)\s+PASSED", text):
+        passed.add(m.group(1))
+    for m in re.finditer(r"PASSED\s+\S*?::([a-zA-Z0-9_.:-]+)", text):
+        passed.add(m.group(1))
+    for m in re.finditer(r"^[ \t]*(?:✓|√)\s+([a-zA-Z0-9_.:-]+)", text, re.M):
+        passed.add(m.group(1))
+    for m in re.finditer(r'<testcase\s+[^>]*name=["\']([^"\']+)["\'][^>]*>(?!\s*<(?:failure|error|skipped))', text, re.I):
+        passed.add(m.group(1))
+    log_dir = ai("logs")
+    if log_dir.exists():
+        for log_xml in log_dir.glob("*.xml"):
+            try:
+                import xml.etree.ElementTree as ET
+                tree = ET.parse(log_xml)
+                for tc in tree.iter("testcase"):
+                    if not list(tc.iter("failure")) and not list(tc.iter("error")) and not list(tc.iter("skipped")):
+                        name = tc.get("name")
+                        if name:
+                            passed.add(name)
+            except Exception:
+                pass
+    return sorted(passed)
+
+
 # ----------------------------------------------------------------------------- gates and next action
 def gate_status(cfg, st, led, tid, card, cur=None, snap=None):
     ts = task_state(st, tid)
@@ -843,9 +1080,25 @@ def gate_status(cfg, st, led, tid, card, cur=None, snap=None):
     gates.append(("verify", bool(e and e["data"].get("ok") and fresh(e)),
                   "no passing verify for the current code" if not e or not fresh(e) or not e["data"].get("ok") else "ok"))
     for stage in ("spec", "quality"):
-        e = led.latest("review", tid, a, stage)
-        good = bool(e and e["data"].get("verdict") == "PASS" and fresh(e))
+        e_rev = led.latest("review", tid, a, stage)
+        good = bool(e_rev and e_rev["data"].get("verdict") == "PASS" and fresh(e_rev))
         gates.append(("review-" + stage, good, "no passing, current %s review" % stage if not good else "ok"))
+
+    plan, _ = parse_plan()
+    if plan and e and fresh(e):
+        passed_tests = set(e["data"].get("passed_tests", []))
+        for r_id in card.get("requirements", []):
+            req = plan.get(r_id, {})
+            for ac in req.get("ac", []):
+                m = re.search(r"\[([a-zA-Z0-9_.:-]+)\]", ac)
+                if m:
+                    test_id = m.group(1)
+                    test_passed = any(test_id == pt or test_id in pt for pt in passed_tests)
+                    gates.append((
+                        "test-" + test_id,
+                        test_passed,
+                        "test '%s' mapped from %s did not run and pass" % (test_id, r_id) if not test_passed else "ok"
+                    ))
     return gates, fp
 
 
@@ -864,6 +1117,8 @@ def next_action():
     p = ai("PLAN.md").read_text(encoding="utf-8")
     if st["plan_hash"] != sha_text(p):
         return "STOP: ask the human to review PLAN.md. Only the human approves it: osr approve-plan --by <name>"
+    if st.get("config_hash") and st["config_hash"] != sha_config():
+        return "STOP: config.json changed since plan approval. The human must re-run approve-plan: osr approve-plan --by <name>"
     ids = task_ids()
     if not ids:
         return "Write task cards in .ai/tasks/ (see assets/task-card.md) until every requirement is covered, then: osr task-check --all"
@@ -1041,6 +1296,7 @@ def cmd_plan_check(a):
 
 def cmd_approve(a):
     cfg, st, led = ctx()
+    check_approval_secret(cfg, a)
     plan, errs = parse_plan()
     if errs:
         die("Plan invalid:\n  " + "\n  ".join(errs))
@@ -1048,9 +1304,12 @@ def cmd_approve(a):
         die("No confirmed verification command. Run detect + confirm-commands (or set allow_no_commands for a brand-new project).")
     h = sha_text(ai("PLAN.md").read_text(encoding="utf-8"))
     st["plan_hash"] = h
+    cfg_h = sha_config()
+    st["config_hash"] = cfg_h
     save_state(st)
-    led.append("plan_approved", by=a.by, plan_hash=h)
-    print("Plan approved by %s. Any later edit to PLAN.md voids approval until re-approved." % a.by)
+    by_val = join_arg(a.by)
+    led.append("plan_approved", by=by_val, plan_hash=h, config_hash=cfg_h)
+    print("Plan approved by %s. Any later edit to PLAN.md or config.json voids approval until re-approved." % by_val)
 
 
 def cmd_task_check(a):
@@ -1082,8 +1341,7 @@ def cmd_start(a):
     plan, perrs = parse_plan()
     if perrs:
         die("Plan invalid; fix before starting:\n  " + "\n  ".join(perrs))
-    if st["plan_hash"] != sha_text(ai("PLAN.md").read_text(encoding="utf-8")):
-        die("PLAN.md is not approved or changed since approval. The human must run: osr approve-plan --by <name>")
+    ensure_plan_and_config_approved(st)
     card, errs = validate_card(tid, cfg, plan)
     if errs:
         die("Task card invalid:\n  " + "\n  ".join(errs))
@@ -1112,11 +1370,32 @@ def cmd_start(a):
             if not e or e["seq"] < req.get("seq", 0) or not e["data"].get("ok"):
                 die("Triage said 'environment' fault: fix the environment, then run: osr env-check (must pass).")
     cur = walk_tree(cfg)
-    if not snap_path(tid).exists():
-        snap_path(tid).write_text(json.dumps(cur), encoding="utf-8")
-    ts.update({"status": "in_progress", "attempts": ts["attempts"] + 1, "failures": 0, "model": a.model or "unknown", "input_hash": ih, "requires": None})
-    save_state(st)
-    led.append("start", tid, ts["attempts"], model=ts["model"], input_hash=ih)
+    baseline = {}
+    for n in cfg.get("global_verify", []):
+        if n in cfg.get("commands", {}) and confirmed(cfg, led, n):
+            res = run_recorded(cfg["commands"][n]["cmd"], cfg, "%s-baseline-%s" % (tid, n))
+            baseline[n] = {"ok": res["ok"], "exit": res["exit"], "sha": res["output_sha"]}
+    for i, v in enumerate(card["verify"]):
+        if not TRIVIAL_CMD.match(v) and is_verify_cmd_confirmed(v, cfg, led):
+            res = run_recorded(v, cfg, "%s-baseline-task-%d" % (tid, i))
+            baseline["task_%d" % i] = {"cmd": v, "ok": res["ok"], "exit": res["exit"], "sha": res["output_sha"]}
+
+    with LedgerLock(timeout=0.3):
+        if not snap_path(tid).exists():
+            snap_path(tid).write_text(json.dumps(cur), encoding="utf-8")
+        ts.update({"status": "in_progress", "attempts": ts["attempts"] + 1, "failures": 0, "model": a.model or "unknown", "input_hash": ih, "requires": None, "baseline": baseline})
+        save_state(st)
+        led.append("start", tid, ts["attempts"], model=ts["model"], input_hash=ih, baseline=baseline)
+    if JSON_MODE:
+        emit_json({
+            "ok": True,
+            "exit_code": 0,
+            "status": "ok",
+            "task": tid,
+            "attempt": ts["attempts"],
+            "model": ts["model"],
+            "allowed_files": card["allowed_files"]
+        }, code=0)
     print("Task %s started (attempt %d). Allowed files: %s" % (tid, ts["attempts"], ", ".join(card["allowed_files"])))
     print("Read ONLY the card and its context_files. Implement, then run: osr verify %s" % tid)
 
@@ -1133,6 +1412,7 @@ def cmd_check(a):
 
 def cmd_verify(a):
     cfg, st, led = ctx()
+    ensure_plan_and_config_approved(st)
     tid = a.task
     ts = require_active(st, tid)
     require_not_failed_out(cfg, ts, tid)
@@ -1141,14 +1421,26 @@ def cmd_verify(a):
         die("Task card invalid:\n  " + "\n  ".join(errs))
     snap = load_snap(tid)
     r = run_check(cfg, st, tid, card, snap, walk_tree(cfg))
-    print_check(r)
+    if not JSON_MODE:
+        print_check(r)
     led.append("check", tid, ts["attempts"], ok=r["ok"], fp=r["fp"], flags=r["flags"], unchecked=r["refs"]["unchecked"][:30])
     if not r["ok"]:
         ts["failures"] += 1
         save_state(st)
         led.append("verify", tid, ts["attempts"], ok=False, fp=r["fp"], reason="pre-check failed", results=[])
+        if JSON_MODE:
+            emit_json({
+                "ok": False,
+                "exit_code": 2,
+                "status": "gate_failed",
+                "task": tid,
+                "reason": "static checks failed",
+                "failures": ts["failures"],
+                "max_failures": cfg["max_inner_failures"],
+                "flags": r["flags"]
+            }, code=2)
         print("VERIFY: FAIL (static checks failed; commands not run). Failures this attempt: %d/%d" % (ts["failures"], cfg["max_inner_failures"]))
-        sys.exit(1)
+        sys.exit(2)
     cmds = []
     for n in cfg["global_verify"]:
         if n not in cfg["commands"]:
@@ -1166,21 +1458,57 @@ def cmd_verify(a):
     cur2 = walk_tree(cfg)
     r2 = run_check(cfg, st, tid, card, snap, cur2)
     if not r2["ok"] and r["ok"]:
-        print("The verification run itself changed files outside scope or created flagged content:")
-        print_check(r2)
+        if not JSON_MODE:
+            print("The verification run itself changed files outside scope or created flagged content:")
+            print_check(r2)
         ok = False
     led.append("check", tid, ts["attempts"], ok=r2["ok"], fp=r2["fp"], flags=r2["flags"], unchecked=r2["refs"]["unchecked"][:30])
-    led.append("verify", tid, ts["attempts"], ok=ok, fp=r2["fp"], results=[{k: v for k, v in x.items() if k != "tail"} for x in results])
+    start_entry = led.latest("start", tid, ts["attempts"])
+    base = (start_entry.get("data") if start_entry else {}).get("baseline", {})
+    red_green = {}
+    for res in results:
+        cmd_name = res["name"]
+        prior = base.get(cmd_name)
+        if prior:
+            if not prior.get("ok") and res["ok"]:
+                red_green[cmd_name] = "transitioned_to_green"
+            elif prior.get("ok") and res["ok"]:
+                red_green[cmd_name] = "preserved_green"
+            else:
+                red_green[cmd_name] = "failing"
+    all_output_text = ""
+    for res in results:
+        if res.get("log"):
+            log_p = ai("logs", res["log"])
+            if log_p.exists():
+                all_output_text += "\n" + log_p.read_text(encoding="utf-8", errors="replace")
+    passed_tests = extract_passed_tests(all_output_text)
+    clean_results = [{k: v for k, v in x.items() if k != "tail"} for x in results]
+    led.append("verify", tid, ts["attempts"], ok=ok, fp=r2["fp"], results=clean_results, red_green=red_green, passed_tests=passed_tests)
     if not ok:
         ts["failures"] += 1
         save_state(st)
+    if JSON_MODE:
+        emit_json({
+            "ok": ok,
+            "exit_code": 0 if ok else 2,
+            "status": "ok" if ok else "gate_failed",
+            "task": tid,
+            "failures": ts["failures"],
+            "max_failures": cfg["max_inner_failures"],
+            "results": clean_results,
+            "red_green": red_green,
+            "passed_tests": passed_tests,
+            "next": next_action()
+        }, code=0 if ok else 2)
     print("\nVERIFY: %s" % ("PASS" if ok else "FAIL  (failures this attempt: %d/%d)" % (ts["failures"], cfg["max_inner_failures"])))
     print("NEXT: %s" % next_action())
-    sys.exit(0 if ok else 1)
+    sys.exit(0 if ok else 2)
 
 
 def cmd_review(a):
     cfg, st, led = ctx()
+    ensure_plan_and_config_approved(st)
     tid, stage = a.task, a.stage
     ts = require_active(st, tid)
     require_not_failed_out(cfg, ts, tid)
@@ -1229,6 +1557,7 @@ def cmd_review(a):
 
 def cmd_done(a):
     cfg, st, led = ctx()
+    ensure_plan_and_config_approved(st)
     tid = a.task
     ts = require_active(st, tid)
     card, errs = validate_card(tid, cfg, parse_plan()[0])
@@ -1275,12 +1604,14 @@ def cmd_triage(a):
 
 def cmd_unblock(a):
     cfg, st, led = ctx()
+    check_approval_secret(cfg, a)
     ts = task_state(st, a.task)
     ts["blocked"] = None
     ts["extra_attempts"] += a.extra_attempts
     save_state(st)
-    led.append("unblock", a.task, ts["attempts"], by=a.by, note=a.note, extra_attempts=a.extra_attempts)
-    print("Unblocked %s by %s." % (a.task, a.by))
+    by_val = join_arg(a.by)
+    led.append("unblock", a.task, ts["attempts"], by=by_val, note=a.note, extra_attempts=a.extra_attempts)
+    print("Unblocked %s by %s." % (a.task, by_val))
 
 
 def cmd_waive(a):
@@ -1291,6 +1622,8 @@ def cmd_waive(a):
     kind = a.flag.split(":")[0]
     if kind in cfg["human_only_flags"] and not a.approved_by:
         die("'%s' flags need human approval. Ask the human, then add: --approved-by <name>" % kind)
+    if kind in cfg.get("human_only_flags", []) or a.approved_by:
+        check_approval_secret(cfg, a)
     st["waivers"].append({"task": a.task, "flag": a.flag, "reason": a.reason, "approved_by": a.approved_by})
     save_state(st)
     led.append("waive", a.task, ts["attempts"], flag=a.flag, reason=a.reason, approved_by=a.approved_by)
@@ -1299,22 +1632,26 @@ def cmd_waive(a):
 
 def cmd_signoff(a):
     cfg, st, led = ctx()
+    check_approval_secret(cfg, a)
     plan, _ = parse_plan()
     if not plan or a.req not in plan:
         die("Unknown requirement %s" % a.req)
-    st["signoffs"][a.req] = {"by": a.by, "note": a.note, "ts": now()}
+    by_val = join_arg(a.by)
+    st["signoffs"][a.req] = {"by": by_val, "note": a.note, "ts": now()}
     save_state(st)
-    led.append("signoff", None, None, req=a.req, by=a.by, note=a.note)
-    print("%s signed off by %s." % (a.req, a.by))
+    led.append("signoff", None, None, req=a.req, by=by_val, note=a.note)
+    print("%s signed off by %s." % (a.req, by_val))
 
 
 def cmd_reset(a):
     cfg, st, led = ctx()
+    check_approval_secret(cfg, a)
     st["tasks"][a.task] = task_state({"tasks": {}}, a.task)
     if snap_path(a.task).exists():
         snap_path(a.task).unlink()
     save_state(st)
-    led.append("reset", a.task, None, by=a.by, reason=a.reason)
+    by_val = join_arg(a.by)
+    led.append("reset", a.task, None, by=by_val, reason=a.reason)
     print("Task %s reset (history stays in the ledger)." % a.task)
 
 
@@ -1337,6 +1674,13 @@ def requirement_rows(cfg, st, led, plan):
                 if any(s.get("status") == "PASS" for s in statuses) and v["check"] == "auto":
                     status = "VERIFIED"
                     ev = next(s["evidence"] for s in statuses if s.get("status") == "PASS")
+                    test_tags = []
+                    for ac in v.get("ac", []):
+                        m = re.search(r"\[([a-zA-Z0-9_.:-]+)\]", ac)
+                        if m:
+                            test_tags.append(m.group(1))
+                    if test_tags:
+                        ev += " (tests: %s)" % ", ".join(test_tags)
                 elif r in st["signoffs"]:
                     status, ev = "HUMAN-SIGNED", st["signoffs"][r]["by"]
                 else:
@@ -1398,7 +1742,14 @@ def cmd_audit(a):
 def cmd_status(a):
     cfg, st, led = ctx()
     ok, msg = led.verify_chain()
-    lines = ["# State", "", "Ledger: %s" % msg, ""]
+    plan_ok = st["plan_hash"] == sha_text(ai("PLAN.md").read_text(encoding="utf-8"))
+    cfg_ok = not st.get("config_hash") or st.get("config_hash") == sha_config()
+    lines = ["# State", "", "Ledger: %s" % msg]
+    if not plan_ok:
+        lines.append("Plan: VOIDED (PLAN.md changed since approval)")
+    elif not cfg_ok:
+        lines.append("Config: VOIDED (config.json changed since plan approval)")
+    lines.append("")
     for t in task_ids():
         ts = task_state(st, t)
         lines.append("- %s: %s (attempt %d, failures %d)%s" % (t, ts["status"], ts["attempts"], ts["failures"], " BLOCKED: " + ts["blocked"] if ts["blocked"] else ""))
@@ -1408,24 +1759,169 @@ def cmd_status(a):
 
 
 def cmd_next(a):
-    print(next_action())
+    act = next_action()
+    if JSON_MODE:
+        emit_json({"ok": True, "exit_code": 0, "status": "ok", "action": act}, code=0)
+    print(act)
+
+
+def cmd_anchor(a):
+    anchor_path = Path(a.file).resolve() if getattr(a, "file", None) else (ROOT / ".osr-anchor")
+    led = Ledger()
+    es = led.entries()
+    if not es:
+        die("Cannot anchor an empty ledger.", code=EXIT_USER_ERR)
+    head = es[-1]
+    data = {
+        "seq": head["seq"],
+        "head_hash": head["hash"],
+        "ts": head.get("ts", now()),
+    }
+    anchor_path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    if JSON_MODE:
+        emit_json({"ok": True, "exit_code": 0, "status": "ok", "anchor_file": str(anchor_path), "head_hash": head["hash"], "seq": head["seq"]}, code=0)
+    print("Ledger anchored to %s at seq %d (%s)." % (anchor_path.name, head["seq"], head["hash"][:12]))
 
 
 def cmd_ledger_verify(a):
-    ok, msg = Ledger().verify_chain()
+    anchor_p = Path(a.anchor).resolve() if getattr(a, "anchor", None) else None
+    ok, msg = Ledger().verify_chain(anchor_path=anchor_p)
+    if JSON_MODE:
+        emit_json({"ok": ok, "exit_code": 0 if ok else 4, "status": "ok" if ok else "integrity_violation", "message": msg}, code=0 if ok else 4)
     print("LEDGER: %s" % msg)
-    sys.exit(0 if ok else 1)
+    sys.exit(0 if ok else 4)
+
+
+def cmd_review_pack(a):
+    cfg, st, led = ctx()
+    tid = a.task
+    plan, perrs = parse_plan()
+    card, errs = validate_card(tid, cfg, plan)
+    if errs:
+        die("Task card invalid:\n  " + "\n  ".join(errs))
+
+    snap = load_snap(tid)
+    cur = walk_tree(cfg)
+    diff_map = diff_tree(snap, cur)
+
+    diff_lines = []
+    res = subprocess.run(["git", "diff"], capture_output=True, text=True, cwd=str(ROOT))
+    if res.returncode == 0 and res.stdout.strip():
+        diff_lines.append(res.stdout.strip())
+
+    for path_str, status in sorted(diff_map.items()):
+        p = ROOT / path_str
+        if status == "A" and p.exists():
+            try:
+                content = p.read_text(encoding="utf-8", errors="replace")
+                diff_lines.append(f"diff --git a/{path_str} b/{path_str}\nnew file mode 100644\n--- /dev/null\n+++ b/{path_str}\n" + "\n".join("+" + l for l in content.splitlines()))
+            except Exception:
+                diff_lines.append(f"diff --git a/{path_str} b/{path_str} (new file)")
+        elif status == "D":
+            diff_lines.append(f"diff --git a/{path_str} b/{path_str}\ndeleted file mode 100644\n--- a/{path_str}\n+++ /dev/null")
+        elif status == "M" and (res.returncode != 0 or not res.stdout.strip()) and p.exists():
+            try:
+                content = p.read_text(encoding="utf-8", errors="replace")
+                diff_lines.append(f"diff --git a/{path_str} b/{path_str}\n" + content)
+            except Exception:
+                diff_lines.append(f"diff --git a/{path_str} b/{path_str} (modified)")
+
+    diff_content = "\n\n".join(diff_lines) if diff_lines else "(No diff)"
+
+    req_lines = []
+    for r in card.get("requirements", []):
+        rinfo = plan.get(r, {})
+        req_lines.append(f"- **{r}**: {rinfo.get('title', '')}")
+        for ac in rinfo.get("ac", []):
+            req_lines.append(f"  - AC: {ac}")
+
+    card_path = ai("tasks", f"{tid}.md")
+    card_raw = card_path.read_text(encoding="utf-8") if card_path.exists() else ""
+
+    pack_sections = [
+        f"# Review Pack: {tid}",
+        "",
+        "## Acceptance Criteria",
+        "\n".join(req_lines) if req_lines else "(None specified)",
+        "",
+        "## Task Specification",
+        card_raw,
+        "",
+        "## Code Diff",
+        "```diff",
+        diff_content,
+        "```",
+    ]
+    pack_text = "\n".join(pack_sections) + "\n"
+
+    if getattr(a, "out", None):
+        out_p = Path(a.out)
+        out_p.parent.mkdir(parents=True, exist_ok=True)
+        out_p.write_text(pack_text, encoding="utf-8")
+
+    if JSON_MODE:
+        emit_json({
+            "ok": True,
+            "exit_code": 0,
+            "status": "ok",
+            "task": tid,
+            "requirements": card.get("requirements", []),
+            "diff": diff_content,
+            "card": card_raw
+        }, code=0)
+    print(pack_text)
+
+
+def cmd_quick(a):
+    cfg, st, led = ctx(require_chain=False)
+    if a.allowed:
+        allowed_pats = [pt.strip() for pt in a.allowed.split(",") if pt.strip()]
+        res = subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True, cwd=str(ROOT))
+        if res.returncode == 0:
+            changed = []
+            for line in res.stdout.splitlines():
+                parts = line.strip().split(maxsplit=1)
+                if len(parts) == 2:
+                    changed.append(parts[1].replace("\\", "/").strip('"\''))
+        else:
+            cur = walk_tree(cfg)
+            changed = [f for f in cur.keys() if not f.startswith(".ai/")]
+
+        for f in changed:
+            if not matches(f, allowed_pats):
+                die("Scope violation: file '%s' is outside allowed files (%s)" % (f, a.allowed), code=EXIT_USER_ERR)
+
+    res = run_recorded(a.verify, cfg, "quick")
+    if not res["ok"]:
+        if JSON_MODE:
+            emit_json({"ok": False, "exit_code": 2, "status": "gate_failed", "cmd": a.verify, "log": res.get("log")}, code=2)
+        print("QUICK VERIFY: FAIL")
+        sys.exit(2)
+
+    led.append("quick_verify", cmd=a.verify, allowed=a.allowed, ok=True)
+    if JSON_MODE:
+        emit_json({"ok": True, "exit_code": 0, "status": "ok", "cmd": a.verify, "allowed": a.allowed}, code=0)
+    print("QUICK VERIFY: PASS")
 
 
 def main():
-    global ROOT
-    ap = argparse.ArgumentParser(prog="osr", description="Orchestrator-Supervisor-Reviewer enforcement CLI")
+    global ROOT, JSON_MODE
+    common = argparse.ArgumentParser(add_help=False)
+    common.add_argument("--json", action="store_true", help="output structured JSON")
+
+    class CustomParser(argparse.ArgumentParser):
+        def error(self, message):
+            if "--json" in sys.argv:
+                emit_json({"ok": False, "exit_code": 1, "error": message, "status": "error"}, code=1)
+            super().error(message)
+
+    ap = CustomParser(prog="osr", parents=[common], description="Orchestrator-Supervisor-Reviewer enforcement CLI")
     ap.add_argument("--root", default=None, help="project root (default: current directory)")
     ap.add_argument("--version", action="version", version=VERSION)
     sp = ap.add_subparsers(dest="cmd", required=True)
 
-    def add(name, fn, **kw):
-        p = sp.add_parser(name, **kw)
+    def add(name, fn, parents=(), **kw):
+        p = sp.add_parser(name, parents=[common] + list(parents), **kw)
         p.set_defaults(fn=fn)
         return p
 
@@ -1435,7 +1931,8 @@ def main():
     add("env-check", cmd_env_check, help="re-run smoke commands after an environment fix")
     add("plan-check", cmd_plan_check, help="validate PLAN.md")
     p = add("approve-plan", cmd_approve, help="HUMAN ONLY: approve the current PLAN.md")
-    p.add_argument("--by", required=True)
+    p.add_argument("--by", nargs="+", required=True)
+    p.add_argument("--secret", default=None, help="approval secret (or set OSR_APPROVAL_SECRET)")
     p = add("task-check", cmd_task_check, help="validate task cards")
     p.add_argument("task", nargs="?")
     p.add_argument("--all", action="store_true")
@@ -1459,31 +1956,46 @@ def main():
     p.add_argument("--change", required=True)
     p = add("unblock", cmd_unblock, help="HUMAN ONLY: clear a block or grant extra attempts")
     p.add_argument("task")
-    p.add_argument("--by", required=True)
+    p.add_argument("--by", nargs="+", required=True)
     p.add_argument("--note", required=True)
     p.add_argument("--extra-attempts", type=int, default=0)
+    p.add_argument("--secret", default=None, help="approval secret (or set OSR_APPROVAL_SECRET)")
     p = add("waive", cmd_waive, help="record a justified bypass of a check flag")
     p.add_argument("task")
     p.add_argument("--flag", required=True)
     p.add_argument("--reason", required=True)
     p.add_argument("--approved-by", default=None)
+    p.add_argument("--secret", default=None, help="approval secret (or set OSR_APPROVAL_SECRET)")
     p = add("signoff", cmd_signoff, help="HUMAN ONLY: sign off a manual or unverifiable requirement")
     p.add_argument("req")
-    p.add_argument("--by", required=True)
+    p.add_argument("--by", nargs="+", required=True)
     p.add_argument("--note", default="")
+    p.add_argument("--secret", default=None, help="approval secret (or set OSR_APPROVAL_SECRET)")
     p = add("reset", cmd_reset, help="HUMAN ONLY: reset a task (e.g. after a plan change)")
     p.add_argument("task")
-    p.add_argument("--by", required=True)
+    p.add_argument("--by", nargs="+", required=True)
     p.add_argument("--reason", required=True)
+    p.add_argument("--secret", default=None, help="approval secret (or set OSR_APPROVAL_SECRET)")
     add("coverage", cmd_coverage, help="requirement to task to evidence matrix")
     add("audit", cmd_audit, help="final traceability audit (writes .ai/AUDIT.md)")
     add("status", cmd_status, help="show state and write .ai/STATE.md")
     add("next", cmd_next, help="print the single next required action")
-    add("ledger-verify", cmd_ledger_verify, help="check ledger integrity")
+    p = add("anchor", cmd_anchor, help="record ledger head in an external anchor file (.osr-anchor)")
+    p.add_argument("--file", default=None, help="custom anchor file path (default: .osr-anchor)")
+    p = add("ledger-verify", cmd_ledger_verify, help="check ledger integrity")
+    p.add_argument("--anchor", default=None, help="custom anchor file path to verify against")
+    p = add("review-pack", cmd_review_pack, help="bundle diff, task card, and criteria without builder rationale")
+    p.add_argument("task")
+    p.add_argument("--out", default=None, help="write pack to output file")
+    p = add("quick", cmd_quick, help="rapid verification path without task card ceremony")
+    p.add_argument("--verify", required=True, help="verification command to run")
+    p.add_argument("--allowed", default=None, help="comma-separated list of allowed file patterns")
 
     a = ap.parse_args()
     if a.root:
         ROOT = Path(a.root).resolve()
+    if getattr(a, "json", False):
+        JSON_MODE = True
     a.fn(a)
 
 

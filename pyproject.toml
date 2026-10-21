@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "orchestrator-supervisor-reviewer"
+version = "0.2.0"
+description = "Deterministic verification and supervisory enforcement CLI for AI coding agents"
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+authors = [
+    { name = "Noel Emmanuel", email = "emmanwa000@gmail.com" }
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.scripts]
+osr = "osr:main"
+
+[tool.setuptools]
+py-modules = ["osr"]
+package-dir = {"" = "scripts"}

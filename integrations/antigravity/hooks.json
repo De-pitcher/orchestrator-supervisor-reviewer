@@ -1,0 +1,21 @@
+{
+  "osr-enforcement": {
+    "PreToolUse": [
+      {
+        "matcher": "edit_file|write_file|run_command",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python integrations/antigravity/pre_tool.py"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "type": "command",
+        "command": "python integrations/antigravity/stop_hook.py"
+      }
+    ]
+  }
+}
