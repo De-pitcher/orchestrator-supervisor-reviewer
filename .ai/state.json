@@ -74,15 +74,28 @@
       }
     },
     "T4": {
-      "status": "todo",
-      "attempts": 0,
-      "failures": 0,
-      "model": null,
-      "input_hash": null,
+      "status": "done",
+      "attempts": 1,
+      "failures": 1,
+      "model": "gemini-3.8-pro",
+      "input_hash": "d7883d149f297a45ea8166a0a6ea987498c1d2104e9dab14f39af2ce2f51c406",
       "triaged_attempt": 0,
       "blocked": null,
       "requires": null,
-      "extra_attempts": 0
+      "extra_attempts": 0,
+      "baseline": {
+        "test": {
+          "ok": false,
+          "exit": 1,
+          "sha": "ab6c38284d147c8d8cca3621b65468f46f29bedd9b8658d584c6a5eef9c5bd25"
+        },
+        "task_0": {
+          "cmd": "python -m unittest discover -s tests -v",
+          "ok": false,
+          "exit": 1,
+          "sha": "63e3b8e73edd9a75d4d63d7e0a48106b49fcf5b96af4a89e1ba3a7e6a24f0c4e"
+        }
+      }
     },
     "T5": {
       "status": "todo",

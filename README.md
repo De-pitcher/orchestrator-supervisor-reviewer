@@ -98,6 +98,18 @@ At any point, `osr next` prints the single next required action. That is the com
 
 You get **no silent failure**, not 100% correctness. The plan can be wrong, tests can be weak, and taste has no check. Ways to raise the bar (tests-first approved by a human, a different model as reviewer, type-checkers and mutation testing as confirmed commands) are in [`references/guarantees.md`](references/guarantees.md). The human-only commands and waiver approvals are honor-system unless your harness prevents the AI from running them; see [`references/setups.md`](references/setups.md).
 
+### Seams, Fixtures, Kinds, and Negative Tests
+- **Declared Seams**: When a task card declares `seams:`, the authoritative upstream interface definition must be included in `context_files`, and quality reviews must cite exact snippets from that upstream definition (`SEAM <id>: @ <path>:<line> "snippet"`).
+- **Fixtures & Integrity**: `osr fixture-add <path> --seam <id> --source "<provenance>"` cryptographically anchors captured payload fixtures with SHA-256 hashes. If a fixture is modified without re-registration, verification fails.
+- **Mock Defense**: Unanchored mocks on seam cards are flagged by the deterministic `unanchored-mock` heuristic gate unless anchored to a registered fixture or waived with human approval.
+- **Conditional Kinds**: Cards with `kind: realtime` require a dedicated Realtime Appendix in quality reviews covering teardown, backpressure, race windows, and time drift.
+- **Negative Tests**: Seam cards require `negative_tests:` listing named failure tests covering unexpected upstream responses. Note: `osr` verifies that the named test ran and passed in recorded runner output; this proves the test was executed, not that it is meaningful.
+
+### Not Yet (Roadmap Backlog)
+- **Test-level red/green proof for negative tests**: While command-level red-to-green transitions are tracked from `start` baseline, tracking individual test function transitions (failing at baseline, then passing) across arbitrary test runners is deferred to future work.
+- **Semantic assertion verification (V11)**: Machine detection of tautological assertions (`assert 1 == 1`) without AST-level mutation analysis.
+- **Universal verify command zero-test warning (V12)**: Machine detection of test filter flags (`pytest -k nothing_matches`) that produce zero executions across arbitrary custom test runners.
+
 ## Synthetic Adversarial Regression Benchmark (v0.2.0)
 
 `osr` includes an automated, reproducible adversarial regression benchmark suite (`evals/eval_suite.py`) testing the enforcement harness against 8 specifically seeded mechanical evasion vectors:

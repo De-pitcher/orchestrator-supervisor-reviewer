@@ -19,6 +19,19 @@ C8: PASS - only files named in allowed_files changed
 -->
 SEAM <seam-id>: @ <authoritative-source-path>:<line> "<exact snippet>"
 
+## Realtime Appendix
+<!-- Required ONLY if the task card declares kind: realtime.
+     Address each lifecycle and timing invariant concretely:
+     - Teardown: which close codes or signals are sent, and does reconnect distinguish user-intentional stop from failure?
+     - Backpressure: can a burst saturate network or memory buffers, and are there asynchronous yields?
+     - Race windows: what happens if an event arrives while a prior socket or transaction is draining?
+     - Time drift: do metrics accumulate real deltas or flat increments?
+-->
+- Teardown: <close code/signal details and user-intentional stop vs failure handling>
+- Backpressure: <buffer saturation limits and asynchronous yield points>
+- Race windows: <behavior during drain windows and overlapping arrivals>
+- Time drift: <monotonic delta accounting versus flat increments>
+
 BREAK_ATTEMPTS:
 - Pass a 10 MB string to parse(); check it does not load everything into memory twice
 - Call format_name() with surrogate-pair emoji and confirm no crash or truncation

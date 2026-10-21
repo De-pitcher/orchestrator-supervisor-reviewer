@@ -1118,6 +1118,265 @@ class TestCalc(unittest.TestCase):
         finally:
             p.cleanup()
 
+    def test_kind_realtime_requires_realtime_appendix_in_quality_review(self):
+        p = Project()
+        try:
+            p.osr("init")
+            cfg = json.loads(p.read(".ai/config.json"))
+            cfg["commands"] = {"test": {"cmd": f'"{sys.executable}" -m unittest discover -s tests -t . -q', "verified": False}}
+            cfg["global_verify"] = ["test"]
+            p.write(".ai/config.json", json.dumps(cfg))
+            p.osr("confirm-commands")
+
+            plan_text = """# Plan
+## Goal
+Realtime testing.
+## Non-goals
+None.
+## Requirements
+- R1: Realtime socket handler
+  - AC: establishes connection and drains gracefully
+  - Check: auto
+## Assumptions
+- [x] Python 3 only
+## Open questions
+"""
+            p.write(".ai/PLAN.md", plan_text)
+            card = f"""# T1: Realtime card
+id: T1
+requirements: R1
+kind: realtime
+allowed_files: src/socket.py, tests/test_socket.py
+context_files: .ai/PLAN.md
+verify: "{sys.executable}" -m unittest discover -s tests -t . -q
+
+## Goal
+Implement realtime socket.
+## Constraints
+None.
+## Do not
+None.
+## Definition of done
+Done.
+"""
+            p.write(".ai/tasks/T1.md", card)
+            p.osr("approve-plan", "--by", "human")
+            p.osr("start", "T1")
+            p.write("src/socket.py", "def connect(): return True\n")
+            p.write("tests/test_socket.py", "import unittest\nfrom src.socket import connect\nclass STest(unittest.TestCase):\n    def test_c(self):\n        self.assertTrue(connect())\n")
+            p.osr("verify", "T1")
+            p.write(".ai/reviews/T1.spec.md", 'R1: PASS @ src/socket.py:1 "def connect(): return True"\n\nVERDICT: PASS\n')
+            p.osr("review", "T1", "spec", "--reviewer", "peer")
+
+            # 1. Quality review without realtime appendix must fail for kind: realtime
+            std_quality = """C1: PASS - checked all imports and declared dependencies in package
+C2: PASS - handled empty input and None cases thoroughly
+C3: NA - no network or filesystem operations performed
+C4: PASS - no TODOs, stubs, or placeholder comments
+C5: PASS - unchanged caller signatures verified across modules
+C6: PASS - tests pass with all assertions intact and verified
+C7: PASS - matches existing codebase style and conventions
+C8: PASS - within allowed_files scope without extra changes
+
+BREAK_ATTEMPTS:
+- Attempt 1: simulate rapid socket disconnect and reconnect cycle
+- Attempt 2: send corrupted binary frame header during read loop
+- Attempt 3: saturate send buffer to test memory exhaustion limits
+
+VERDICT: PASS
+"""
+            p.write(".ai/reviews/T1.quality.md", std_quality)
+            code, out = p.osr("review", "T1", "quality", "--reviewer", "peer")
+            self.assertNotEqual(code, 0)
+            self.assertIn("realtime", out.lower())
+
+            # 2. Quality review with complete realtime appendix must pass
+            realtime_quality = """C1: PASS - checked all imports and declared dependencies in package
+C2: PASS - handled empty input and None cases thoroughly
+C3: NA - no network or filesystem operations performed
+C4: PASS - no TODOs, stubs, or placeholder comments
+C5: PASS - unchanged caller signatures verified across modules
+C6: PASS - tests pass with all assertions intact and verified
+C7: PASS - matches existing codebase style and conventions
+C8: PASS - within allowed_files scope without extra changes
+
+## Realtime Appendix
+- Teardown: close code 1000 sent on intentional stop; reconnect distinguishes 1006 abnormal closures.
+- Backpressure: unbounded queues bounded to 1024 frames with async yield on saturation.
+- Race windows: event arrival during socket drain is buffered until new handshake completes.
+- Time drift: latency metrics compute monotonic timestamp deltas rather than fixed increments.
+
+BREAK_ATTEMPTS:
+- Attempt 1: simulate rapid socket disconnect and reconnect cycle
+- Attempt 2: send corrupted binary frame header during read loop
+- Attempt 3: saturate send buffer to test memory exhaustion limits
+
+VERDICT: PASS
+"""
+            p.write(".ai/reviews/T1.quality.md", realtime_quality)
+            code, out = p.osr("review", "T1", "quality", "--reviewer", "peer")
+            self.assertEqual(code, 0, out)
+        finally:
+            p.cleanup()
+
+    def test_negative_tests_enforced_per_seam_and_verified_in_test_output(self):
+        p = Project()
+        try:
+            p.osr("init")
+            cfg = json.loads(p.read(".ai/config.json"))
+            cfg["commands"] = {"test": {"cmd": f'"{sys.executable}" -m unittest discover -s tests -t . -v', "verified": False}}
+            cfg["global_verify"] = ["test"]
+            p.write(".ai/config.json", json.dumps(cfg))
+            p.osr("confirm-commands")
+
+            plan_text = """# Plan
+## Goal
+Seam testing.
+## Non-goals
+None.
+## Requirements
+- R1: External user client
+  - AC: handles unexpected or missing fields [test_user_api_missing_fields]
+  - Check: auto
+## Seams
+| seam id | consumer | provider | authoritative source | how it is checked |
+|---|---|---|---|---|
+| user-api | client | service | services/user.py | negative-test |
+| auth-api | client | service | services/auth.py | negative-test |
+## Assumptions
+- [x] Python 3 only
+## Open questions
+"""
+            p.write(".ai/PLAN.md", plan_text)
+            p.write("services/user.py", 'def get_user(): return {"id": 1}\n')
+            p.write("services/auth.py", 'def get_auth(): return {"token": "xyz"}\n')
+
+            # 1. Card declaring 2 seams but only 1 negative_tests fails task-check
+            card_no_neg = f"""# T1: Seam task without enough negative tests
+id: T1
+requirements: R1
+seams: user-api, auth-api
+negative_tests: test_user_api_missing_fields
+allowed_files: src/calc.py, tests/test_calc.py
+context_files: .ai/PLAN.md, services/user.py, services/auth.py
+verify: "{sys.executable}" -m unittest discover -s tests -t . -v
+
+## Goal
+Implement consumer.
+## Constraints
+None.
+## Do not
+None.
+## Definition of done
+Done.
+"""
+            p.write(".ai/tasks/T1.md", card_no_neg)
+            p.osr("approve-plan", "--by", "human")
+            code, out = p.osr("task-check", "T1")
+            self.assertNotEqual(code, 0)
+            self.assertIn("negative_tests", out.lower())
+
+            # 2. Card with negative_tests declared matching seams
+            card_with_neg = f"""# T1: Seam task with negative tests
+id: T1
+requirements: R1
+seams: user-api
+negative_tests: test_user_api_missing_fields
+allowed_files: src/calc.py, tests/test_calc.py
+context_files: .ai/PLAN.md, services/user.py
+verify: "{sys.executable}" -m unittest discover -s tests -t . -v
+
+## Goal
+Implement consumer with negative test.
+## Constraints
+None.
+## Do not
+None.
+## Definition of done
+Done.
+"""
+            p.write(".ai/tasks/T1.md", card_with_neg)
+            code, out = p.osr("task-check", "T1")
+            self.assertEqual(code, 0, out)
+
+            p.osr("start", "T1")
+            p.write("src/calc.py", "def parse_user(d): return d.get('name', 'anonymous')\n")
+            # Only positive test, missing the declared negative test:
+            p.write("tests/test_calc.py", """import unittest
+from src.calc import parse_user
+
+class TestUser(unittest.TestCase):
+    def test_positive_user(self):
+        self.assertEqual(parse_user({"name": "Bob"}), "Bob")
+""")
+            # Verify passes unittest, but done blocks because named negative test did not run
+            code, out = p.osr("verify", "T1")
+            p.write(".ai/reviews/T1.spec.md", 'R1: PASS @ src/calc.py:1 "def parse_user(d): return d.get(\'name\', \'anonymous\')"\n\nVERDICT: PASS\n')
+            p.osr("review", "T1", "spec", "--reviewer", "peer")
+            p.write(".ai/reviews/T1.quality.md", """C1: PASS - checked all imports and declared dependencies in package
+C2: PASS - handled empty input and None cases thoroughly
+C3: NA - no network or filesystem operations performed
+C4: PASS - no TODOs, stubs, or placeholder comments
+C5: PASS - unchanged caller signatures verified across modules
+C6: PASS - tests pass with all assertions intact and verified
+C7: PASS - matches existing codebase style and conventions
+C8: PASS - within allowed_files scope without extra changes
+
+## Seams
+SEAM user-api: @ services/user.py:1 "def get_user(): return {"id": 1}"
+
+BREAK_ATTEMPTS:
+- Attempt 1: send unexpected payload with extra fields to consumer
+- Attempt 2: send empty JSON object to simulate missing fields
+- Attempt 3: return null payload to test parser error handling
+
+VERDICT: PASS
+""")
+            p.osr("review", "T1", "quality", "--reviewer", "peer")
+            code, out = p.osr("done", "T1")
+            self.assertNotEqual(code, 0)
+            self.assertIn("negative test", out.lower())
+
+            # 3. Add the named negative test -> now verify & done pass!
+            p.write("tests/test_calc.py", """import unittest
+from src.calc import parse_user
+
+class TestUser(unittest.TestCase):
+    def test_positive_user(self):
+        self.assertEqual(parse_user({"name": "Bob"}), "Bob")
+    def test_user_api_missing_fields(self):
+        self.assertEqual(parse_user({}), "anonymous")
+""")
+            p.osr("verify", "T1")
+            p.write(".ai/reviews/T1.spec.md", '<!-- updated -->\nR1: PASS @ src/calc.py:1 "def parse_user(d): return d.get(\'name\', \'anonymous\')"\n\nVERDICT: PASS\n')
+            p.osr("review", "T1", "spec", "--reviewer", "peer")
+            p.write(".ai/reviews/T1.quality.md", """<!-- updated -->
+C1: PASS - checked all imports and declared dependencies in package
+C2: PASS - handled empty input and None cases thoroughly
+C3: NA - no network or filesystem operations performed
+C4: PASS - no TODOs, stubs, or placeholder comments
+C5: PASS - unchanged caller signatures verified across modules
+C6: PASS - tests pass with all assertions intact and verified
+C7: PASS - matches existing codebase style and conventions
+C8: PASS - within allowed_files scope without extra changes
+
+## Seams
+SEAM user-api: @ services/user.py:1 "def get_user(): return {"id": 1}"
+
+BREAK_ATTEMPTS:
+- Attempt 1: send unexpected payload with extra fields to consumer
+- Attempt 2: send empty JSON object to simulate missing fields
+- Attempt 3: return null payload to test parser error handling
+
+VERDICT: PASS
+""")
+            p.osr("review", "T1", "quality", "--reviewer", "peer")
+            code, out = p.osr("done", "T1")
+            self.assertEqual(code, 0, out)
+            self.assertIn("DONE", out)
+        finally:
+            p.cleanup()
+
 
 
 

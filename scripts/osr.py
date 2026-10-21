@@ -535,8 +535,8 @@ def parse_plan():
     return Plan(reqs, seams), errs
 
 
-CARD_KEYS = ["id", "requirements", "depends_on", "allowed_files", "forbidden_files", "context_files", "verify", "seams", "fixtures", "conformance"]
-CARD_LIST_KEYS = ["requirements", "depends_on", "allowed_files", "forbidden_files", "context_files", "seams", "fixtures", "conformance"]
+CARD_KEYS = ["id", "requirements", "depends_on", "allowed_files", "forbidden_files", "context_files", "verify", "seams", "fixtures", "conformance", "kind", "negative_tests"]
+CARD_LIST_KEYS = ["requirements", "depends_on", "allowed_files", "forbidden_files", "context_files", "seams", "fixtures", "conformance", "negative_tests"]
 CARD_HEADINGS = ["goal", "constraints", "do not", "definition of done"]
 
 
@@ -669,6 +669,11 @@ def validate_card(tid, cfg, plan, strict_files=True):
             normalized_src = Path(src).as_posix() if src else ""
             if not normalized_src or normalized_src not in normalized_cf:
                 errs.append("%s: seam '%s' authoritative source '%s' missing from context_files" % (tid, s, src))
+    if c.get("seams") and c.get("negative_tests"):
+        if len(c.get("negative_tests", [])) < len(c["seams"]):
+            errs.append("%s: card declares %d seams but only %d negative_tests (at least one per declared seam required)" % (
+                tid, len(c["seams"]), len(c.get("negative_tests", []))
+            ))
     return c, errs
 
 
@@ -1122,6 +1127,29 @@ def validate_quality_review(text, card=None, plan=None):
                 expected = plan_seams.get(s, {}).get("source", "").strip()
                 errs.append("seam '%s' has no citations pointing into its authoritative source '%s' (format: SEAM %s: @ <source>:<line> \"snippet\")" % (s, expected, s))
 
+    # Realtime Appendix validation if card kind is realtime
+    card_kind = ""
+    if card:
+        k_val = card.get("kind")
+        if isinstance(k_val, list):
+            card_kind = k_val[0] if k_val else ""
+        elif isinstance(k_val, str):
+            card_kind = k_val
+    if card_kind.lower() == "realtime":
+        if not re.search(r"^##\s+Realtime Appendix\b", text, re.M | re.I):
+            errs.append("Realtime Appendix ('## Realtime Appendix') is required for kind: realtime")
+        else:
+            dims = [
+                ("teardown", r"[-*]\s*teardown\s*:\s*(.+)$"),
+                ("backpressure", r"[-*]\s*backpressure\s*:\s*(.+)$"),
+                ("race windows", r"[-*]\s*race\s*windows?\s*:\s*(.+)$"),
+                ("time drift", r"[-*]\s*time\s*drift\s*:\s*(.+)$"),
+            ]
+            for dname, dpat in dims:
+                m = re.search(dpat, text, re.M | re.I)
+                if not m or len(m.group(1).strip()) < 15:
+                    errs.append("Realtime Appendix: '%s' item missing or too short (15+ chars required describing %s behavior)" % (dname, dname))
+
     declared = re.search(r"^\s*VERDICT:\s*(PASS|FAIL)\b", text, re.M)
     derived = "FAIL" if any(v == "FAIL" for v in items.values()) else "PASS"
     if not declared:
@@ -1198,6 +1226,13 @@ def gate_status(cfg, st, led, tid, card, cur=None, snap=None):
                         test_passed,
                         "test '%s' mapped from %s did not run and pass" % (test_id, r_id) if not test_passed else "ok"
                     ))
+        for neg in card.get("negative_tests", []):
+            neg_passed = any(neg == pt or neg in pt for pt in passed_tests)
+            gates.append((
+                "negative-test-" + neg,
+                neg_passed,
+                "named negative test '%s' did not run and pass in recorded test output" % neg if not neg_passed else "ok"
+            ))
     return gates, fp
 
 
@@ -1623,6 +1658,12 @@ def cmd_verify(a):
             if log_p.exists():
                 all_output_text += "\n" + log_p.read_text(encoding="utf-8", errors="replace")
     passed_tests = extract_passed_tests(all_output_text)
+    if card.get("negative_tests"):
+        missing_neg = [t for t in card["negative_tests"] if not any(t == pt or t in pt for pt in passed_tests)]
+        if missing_neg:
+            print("WARNING: named negative test(s) not found in test output: %s" % ", ".join(missing_neg))
+        else:
+            print("Negative tests verified: %s" % ", ".join(card["negative_tests"]))
     clean_results = [{k: v for k, v in x.items() if k != "tail"} for x in results]
     led.append("verify", tid, ts["attempts"], ok=ok, fp=r2["fp"], results=clean_results, red_green=red_green, passed_tests=passed_tests)
     if not ok:
