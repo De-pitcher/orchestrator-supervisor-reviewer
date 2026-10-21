@@ -70,6 +70,30 @@
           "sha": "e6656b7c9a1711be3e7a5de21a41b474261bbd18653b7ecb9fc6ff553a075e25"
         }
       }
+    },
+    "T5": {
+      "status": "done",
+      "attempts": 1,
+      "failures": 0,
+      "model": "gemini-3.8-flash",
+      "input_hash": "6a4c14772130db4d8cf616f9c6451006139571ffe957269d2ecca868b1b02a30",
+      "triaged_attempt": 0,
+      "blocked": null,
+      "requires": null,
+      "extra_attempts": 0,
+      "baseline": {
+        "test": {
+          "ok": true,
+          "exit": 0,
+          "sha": "0b822bb9a4168a84eb9e470c4f6f0eb856b0528c4e1468dfabdc33cd2e1a287c"
+        },
+        "task_0": {
+          "cmd": "python -m unittest discover -s tests -v",
+          "ok": true,
+          "exit": 0,
+          "sha": "f582387ca73095d9355f3e7ceb562d10cec17780568ab9d0e356bdc07dcb50ed"
+        }
+      }
     }
   },
   "waivers": [],

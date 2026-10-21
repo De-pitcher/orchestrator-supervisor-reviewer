@@ -9,6 +9,7 @@ import unittest
 from pathlib import Path
 
 OSR = str(Path(__file__).resolve().parent.parent / "scripts" / "osr.py")
+ROOT_DIR = Path(__file__).resolve().parent.parent
 
 PLAN = """# Plan: calc
 
@@ -449,6 +450,77 @@ class OsrTests(unittest.TestCase):
         code, out = p.osr("ledger-verify")
         self.assertNotEqual(code, 0)
         self.assertIn("anchor", out.lower())
+
+    def test_antigravity_pre_tool_hook_blocks_out_of_scope_edits(self):
+        p = self.p
+        p.setup_ready()
+        p.osr("start", "T1", "--model", "test-model")
+        hook_script = ROOT_DIR / "integrations" / "antigravity" / "pre_tool.py"
+        self.assertTrue(hook_script.exists(), "integrations/antigravity/pre_tool.py must exist")
+
+        payload = {
+            "toolCall": {"name": "edit_file", "args": {"Path": str(p.dir / "src" / "other.py")}},
+            "workspacePaths": [str(p.dir)],
+        }
+        res = subprocess.run([sys.executable, str(hook_script)], input=json.dumps(payload), capture_output=True, text=True, cwd=str(p.dir))
+        self.assertEqual(res.returncode, 0)
+        data = json.loads(res.stdout)
+        self.assertEqual(data.get("decision"), "deny")
+        self.assertIn("scope", data.get("reason", "").lower())
+
+        payload = {
+            "toolCall": {"name": "edit_file", "args": {"Path": str(p.dir / "src" / "calc.py")}},
+            "workspacePaths": [str(p.dir)],
+        }
+        res = subprocess.run([sys.executable, str(hook_script)], input=json.dumps(payload), capture_output=True, text=True, cwd=str(p.dir))
+        self.assertEqual(res.returncode, 0)
+        data = json.loads(res.stdout)
+        self.assertEqual(data.get("decision"), "allow")
+
+    def test_antigravity_pre_tool_hook_blocks_human_commands(self):
+        p = self.p
+        p.setup_ready()
+        hook_script = ROOT_DIR / "integrations" / "antigravity" / "pre_tool.py"
+        self.assertTrue(hook_script.exists())
+
+        payload = {
+            "toolCall": {"name": "run_command", "args": {"CommandLine": "python scripts/osr.py approve-plan --by bot"}},
+            "workspacePaths": [str(p.dir)],
+        }
+        res = subprocess.run([sys.executable, str(hook_script)], input=json.dumps(payload), capture_output=True, text=True, cwd=str(p.dir))
+        self.assertEqual(res.returncode, 0)
+        data = json.loads(res.stdout)
+        self.assertEqual(data.get("decision"), "deny")
+        self.assertIn("human", data.get("reason", "").lower())
+
+    def test_antigravity_stop_hook_forces_continuation_when_tasks_pending(self):
+        p = self.p
+        p.setup_ready()
+        p.osr("start", "T1", "--model", "test-model")
+        stop_script = ROOT_DIR / "integrations" / "antigravity" / "stop_hook.py"
+        self.assertTrue(stop_script.exists(), "integrations/antigravity/stop_hook.py must exist")
+
+        payload = {
+            "terminationReason": "NO_TOOL_CALL",
+            "workspacePaths": [str(p.dir)],
+        }
+        res = subprocess.run([sys.executable, str(stop_script)], input=json.dumps(payload), capture_output=True, text=True, cwd=str(p.dir))
+        self.assertEqual(res.returncode, 0)
+        data = json.loads(res.stdout)
+        self.assertEqual(data.get("terminationBehavior"), "force_continue")
+
+    def test_git_pre_commit_hook(self):
+        p = self.p
+        p.setup_ready()
+        pre_commit_script = ROOT_DIR / "integrations" / "git" / "pre_commit.py"
+        self.assertTrue(pre_commit_script.exists())
+        res = subprocess.run([sys.executable, str(pre_commit_script)], capture_output=True, text=True, cwd=str(p.dir))
+        self.assertEqual(res.returncode, 0)
+
+        p.write(".ai/ledger.jsonl", "corrupted json line\n")
+        res = subprocess.run([sys.executable, str(pre_commit_script)], capture_output=True, text=True, cwd=str(p.dir))
+        self.assertNotEqual(res.returncode, 0)
+
 
 
 if __name__ == "__main__":
