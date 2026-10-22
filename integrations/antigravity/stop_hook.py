@@ -2,7 +2,7 @@
 """Stop lifecycle hook for Antigravity.
 
 Inspects OSR task progress and prevents the agent from terminating when tasks
-are in progress or unverified, forcing continuation with the next action from osr next.
+are in progress or unverified, returning decision: continue with the next action from osr next.
 """
 from __future__ import annotations
 
@@ -39,6 +39,8 @@ def main():
                     if res.returncode == 0 and res.stdout.strip():
                         next_act = res.stdout.strip()
                 print(json.dumps({
+                    "decision": "continue",
+                    "reason": f"OSR Gate: workflow is not complete. Next required action: {next_act}",
                     "terminationBehavior": "force_continue",
                     "injectSteps": [
                         {
@@ -51,6 +53,8 @@ def main():
             pass
 
     print(json.dumps({
+        "decision": "approve",
+        "reason": "OSR Gate: all tasks complete or no active workflow.",
         "terminationBehavior": "",
         "injectSteps": []
     }))

@@ -27,7 +27,7 @@ import sys
 import time
 from pathlib import Path
 
-VERSION = "0.3.0"
+VERSION = "0.3.1"
 ROOT = Path.cwd()
 SCRIPT_DIR = Path(__file__).resolve().parent
 ASSETS = SCRIPT_DIR.parent / "assets"
@@ -84,6 +84,19 @@ SECRET_PATTERNS = [
     r"sk-[A-Za-z0-9]{32,}",
     r"xox[baprs]-[A-Za-z0-9-]{10,}",
 ]
+BOGUS_SOURCE_PAT = re.compile(
+    r"(?:^|[/\\])(?:mocks?|fixtures?|stubs?|tests?|fakes?)(?:[/\\]|$)|(?:^|[/\\])(?:mock_|fake_|stub_|test_)[^/\\]+$|\.(?:mock|stub|fake|test|spec)\.[^/\\]+$",
+    re.I,
+)
+
+
+def is_mock_or_test_source(path_str):
+    if not path_str:
+        return False
+    clean = path_str.strip().replace("\\", "/")
+    return bool(BOGUS_SOURCE_PAT.search(clean))
+
+
 TEST_PATH = re.compile(
     r"(^|/)(tests?|__tests__|specs?)/|(^|/)test_[^/]*$|[^/]*(_test|\.test|\.spec|_spec)\.[^/]+$|[^/]*Tests?\.(java|kt|cs|swift)$"
 )
@@ -100,11 +113,97 @@ NO_TESTS = re.compile(
     re.I,
 )
 TRIVIAL_CMD = re.compile(r"^\s*(echo|true|exit\s+0|:|printf|print)\b", re.I)
+WEAK_VERIFY_PAT = re.compile(
+    r"(\bgrep\b|\bfindstr\b|\bSelect-String\b|-c\s+[\"'].*?(?:in\s+pathlib|sys\.exit|import\s+pathlib))",
+    re.I,
+)
 CODE_EXTS = {
     ".go", ".rs", ".java", ".kt", ".cs", ".rb", ".php", ".swift", ".c", ".cc", ".cpp", ".h", ".hpp",
     ".scala", ".dart", ".ex", ".exs", ".lua", ".sh", ".ps1", ".vue", ".svelte", ".r", ".jl", ".zig",
 }
 JS_EXTS = [".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs"]
+JS_TAUTOLOGY_RE = [
+    re.compile(r"expect\s*\(\s*([a-zA-Z0-9_$.]+)\s*\)\s*\.(toBe|toEqual|toStrictEqual)\s*\(\s*\1\s*\)"),
+    re.compile(r"""expect\s*\(\s*(true|false|\d+|"[^"]*"|'[^']*')\s*\)\s*\.(toBe|toEqual|toStrictEqual)\s*\(\s*\1\s*\)"""),
+    re.compile(r"assert\s*\.\s*(equal|strictEqual|deepEqual)\s*\(\s*([a-zA-Z0-9_$.]+)\s*,\s*\2\s*\)"),
+]
+
+
+def scan_tautological_python(path, text):
+    findings = []
+    try:
+        tree = ast.parse(text, filename=str(path))
+    except Exception:
+        return findings
+
+    def is_const(n):
+        if isinstance(n, ast.Constant):
+            return True
+        if hasattr(ast, "Num") and isinstance(n, (ast.Num, ast.Str, ast.NameConstant)):
+            return True
+        return False
+
+    def same_node(n1, n2):
+        if type(n1) is not type(n2):
+            return False
+        if isinstance(n1, ast.Name):
+            return n1.id == n2.id
+        if isinstance(n1, ast.Constant):
+            return n1.value == n2.value
+        if hasattr(ast, "Num") and isinstance(n1, ast.Num):
+            return n1.n == n2.n
+        if hasattr(ast, "Str") and isinstance(n1, ast.Str):
+            return n1.s == n2.s
+        if hasattr(ast, "NameConstant") and isinstance(n1, ast.NameConstant):
+            return n1.value == n2.value
+        if isinstance(n1, ast.Attribute):
+            return n1.attr == n2.attr and same_node(n1.value, n2.value)
+        try:
+            return ast.dump(n1) == ast.dump(n2)
+        except Exception:
+            return False
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assert):
+            t = node.test
+            if is_const(t) and bool(getattr(t, "value", True)):
+                findings.append((node.lineno, "Python AST: constant assertion"))
+            elif isinstance(t, ast.Compare):
+                for op, comp in zip(t.ops, t.comparators):
+                    if isinstance(op, (ast.Eq, ast.Is)):
+                        if same_node(t.left, comp):
+                            findings.append((node.lineno, "Python AST: self-comparison assertion"))
+                        elif is_const(t.left) and is_const(comp):
+                            findings.append((node.lineno, "Python AST: constant comparison assertion"))
+        elif isinstance(node, ast.Call):
+            name = ""
+            if isinstance(node.func, ast.Attribute):
+                name = node.func.attr
+            elif isinstance(node.func, ast.Name):
+                name = node.func.id
+            if name in ("assertEqual", "assertIs", "assert_equal"):
+                if len(node.args) >= 2:
+                    if same_node(node.args[0], node.args[1]):
+                        findings.append((node.lineno, "Python AST: %s self-comparison" % name))
+                    elif is_const(node.args[0]) and is_const(node.args[1]):
+                        findings.append((node.lineno, "Python AST: %s with constant literals" % name))
+            elif name in ("assertTrue", "assertFalse"):
+                if len(node.args) >= 1 and is_const(node.args[0]):
+                    val = getattr(node.args[0], "value", None)
+                    if (name == "assertTrue" and bool(val) is True) or (name == "assertFalse" and bool(val) is False):
+                        findings.append((node.lineno, "Python AST: %s with constant literal" % name))
+    return findings
+
+
+def scan_tautological_js(path, text):
+    findings = []
+    lines = text.splitlines()
+    for idx, line in enumerate(lines, 1):
+        for pat in JS_TAUTOLOGY_RE:
+            if pat.search(line):
+                findings.append((idx, "heuristic JS tautological assertion: %s" % line.strip()[:60]))
+                break
+    return findings
 NODE_BUILTINS = set(
     "assert async_hooks buffer child_process cluster console constants crypto dgram diagnostics_channel dns "
     "domain events fs http http2 https inspector module net os path perf_hooks process punycode querystring "
@@ -300,7 +399,7 @@ class Ledger:
                 if raw.startswith("{"):
                     ainfo = json.loads(raw)
                     aseq = ainfo.get("seq")
-                    ahash = ainfo.get("head_hash")
+                    ahash = ainfo.get("head_hash") or ainfo.get("hash")
                 else:
                     aseq = None
                     ahash = raw
@@ -533,6 +632,8 @@ def parse_plan():
             provider = parts[2]
             source = parts[3]
             how = parts[4] if len(parts) > 4 else ""
+            if is_mock_or_test_source(source):
+                errs.append("PLAN.md: seam '%s' authoritative source '%s' points to a mock/test/fixture path; authoritative source must be provider production source or specification" % (sid, source))
             seams[sid] = {
                 "consumer": consumer,
                 "provider": provider,
@@ -633,6 +734,8 @@ def validate_card(tid, cfg, plan, strict_files=True):
     for v in c["verify"]:
         if TRIVIAL_CMD.match(v):
             errs.append("%s: verify command '%s' cannot prove anything" % (tid, v))
+        elif WEAK_VERIFY_PAT.search(v):
+            errs.append("%s: verify command '%s' is a weak verify command (token existence check, not a test)" % (tid, v))
         elif not is_verify_cmd_confirmed(v, cfg):
             errs.append("%s: verify command '%s' is not confirmed (must match a confirmed command in .ai/config.json)" % (tid, v))
     for v in c.get("conformance", []):
@@ -672,6 +775,8 @@ def validate_card(tid, cfg, plan, strict_files=True):
             errs.append("%s: seam '%s' is not declared in PLAN.md Seams table" % (tid, s))
         else:
             src = seams_dict[s].get("source", "").strip()
+            if is_mock_or_test_source(src):
+                errs.append("%s: seam '%s' authoritative source '%s' points to a mock/test/fixture path; authoritative source must be provider production source or specification" % (tid, s, src))
             normalized_cf = [Path(cf).as_posix() for cf in c["context_files"]]
             normalized_src = Path(src).as_posix() if src else ""
             if not normalized_src or normalized_src not in normalized_cf:
@@ -719,12 +824,13 @@ def save_log(led_seq_hint, label, text):
 
 def run_recorded(cmd, cfg, label):
     code, text, secs, to = run_cmd(cmd, cfg)
-    suspect = bool(NO_TESTS.search(text)) and code == 0
+    zero_tests = bool(NO_TESTS.search(text))
+    suspect = zero_tests
     log = save_log(0, label, text)
     if not JSON_MODE:
         print("\n$ %s\n%s\n[exit %s%s | %ss | log .ai/logs/%s]" % (cmd, tail(text), code, " TIMEOUT" if to else "", secs, log))
-        if suspect:
-            print("SUSPECT: exit 0 but output says no tests ran. Treated as FAILURE.")
+        if zero_tests:
+            print("SUSPECT: weak verify command: exit %s and output says no tests ran. Treated as FAILURE." % code)
     return {
         "cmd": cmd, "exit": code, "timeout": to, "suspect": suspect, "secs": secs,
         "output_sha": sha_text(text), "tail": tail(text, 15)[-1500:], "log": log,
@@ -901,6 +1007,16 @@ def run_check(cfg, st, tid, card, snap, cur):
                 flags.append(("tests-weakened:%s:%d->%d" % (p, old.get("asserts", 0), new.get("asserts", 0)), "assertion count decreased"))
             if new.get("skips", 0) > old.get("skips", 0):
                 flags.append(("skips-added:%s" % p, "skip/only/xfail marker added"))
+        if s != "D" and (new.get("test") or TEST_PATH.search(p)):
+            file_p = ROOT / p
+            if file_p.is_file():
+                txt = file_p.read_text(encoding="utf-8", errors="replace")
+                if p.endswith(".py"):
+                    for lno, msg in scan_tautological_python(p, txt):
+                        flags.append(("tautological-assertion:%s:%d" % (p, lno), msg))
+                elif any(p.endswith(ext) for ext in JS_EXTS):
+                    for lno, msg in scan_tautological_js(p, txt):
+                        flags.append(("tautological-assertion:%s:%d" % (p, lno), msg))
 
     # Heuristic gate: unanchored-mock on cards declaring seams
     if card.get("seams"):
@@ -921,7 +1037,7 @@ def run_check(cfg, st, tid, card, snap, cur):
                                 anchored = True
                                 break
                         if not anchored:
-                            flags.append(("unanchored-mock:%s" % p, "test uses mock constructs on seam card without loading registered fixture"))
+                            flags.append(("unanchored-mock:%s" % p, "test uses mock constructs on seam card without loading registered fixture (heuristic: flags common mock libraries)"))
 
     waived = {w["flag"] for w in st["waivers"] if w["task"] == tid}
     is_waived = lambda f: f in waived or f.split(":")[0] in waived
@@ -1437,7 +1553,7 @@ def cmd_plan_check(a):
                 text_to_check = v["text"] + " " + " ".join(v.get("ac", []))
                 m = external_kw.search(text_to_check)
                 if m:
-                    warnings.append("PLAN WARNING: requirement %s mentions external interface ('%s') but Seams table is empty (consider declaring in ## Seams)" % (r, m.group(1)))
+                    warnings.append("PLAN WARNING: (heuristic keyword match) requirement %s mentions external interface ('%s') but Seams table is empty (consider declaring in ## Seams)" % (r, m.group(1)))
     for w in warnings:
         print(w)
     for e in errs:
@@ -1455,6 +1571,16 @@ def cmd_approve(a):
         die("Plan invalid:\n  " + "\n  ".join(errs))
     if not any(confirmed(cfg, led, n) for n in cfg["commands"]) and not cfg["allow_no_commands"]:
         die("No confirmed verification command. Run detect + confirm-commands (or set allow_no_commands for a brand-new project).")
+    seams = getattr(plan, "seams", {})
+    if seams:
+        print("\n=== Declared Seams in PLAN.md ===")
+        print("%-18s | %-16s | %-18s | %-30s | %s" % ("Seam ID", "Consumer", "Provider", "Authoritative Source", "How Checked"))
+        print("-" * 105)
+        for sid, sinfo in sorted(seams.items()):
+            print("%-18s | %-16s | %-18s | %-30s | %s" % (
+                sid, sinfo.get("consumer", ""), sinfo.get("provider", ""), sinfo.get("source", ""), sinfo.get("how", "")
+            ))
+        print("=" * 105 + "\n")
     h = sha_text(ai("PLAN.md").read_text(encoding="utf-8"))
     st["plan_hash"] = h
     cfg_h = sha_config()
@@ -1474,6 +1600,8 @@ def cmd_task_check(a):
         c, e = validate_card(t, cfg, plan)
         allerrs += e
         print("%s: %s" % (t, "OK" if not e else "INVALID"))
+        if c and c.get("seams") and c.get("fixtures") and not c.get("conformance"):
+            print("  TASK WARNING: %s declares fixtures for seam(s) %s without 'conformance:' commands (audit will report UNVERIFIED)" % (t, ", ".join(c.get("seams", []))))
     for e in allerrs:
         print("  - " + e)
     if a.all and plan:
@@ -1847,6 +1975,51 @@ def cmd_fixture_add(a):
     print("Fixture registered: %s (seam: %s, sha256: %s)" % (rel_path, a.seam, h))
 
 
+def cmd_fixture_capture(a):
+    cfg, st, led = ctx()
+    cmd = a.cmd.strip()
+    is_conf = False
+    actual_cmd = None
+    if cmd in cfg.get("commands", {}):
+        if confirmed(cfg, led, cmd):
+            is_conf = True
+            actual_cmd = cfg["commands"][cmd]["cmd"]
+    elif is_verify_cmd_confirmed(cmd, cfg, led):
+        is_conf = True
+        actual_cmd = cmd
+
+    if not is_conf or not actual_cmd:
+        die("Capture command '%s' is not confirmed. Run: osr confirm-commands or define it in .ai/config.json" % cmd)
+
+    code, text, secs, to = run_cmd(actual_cmd, cfg)
+    if code != 0 or to:
+        die("Fixture capture command failed (exit %s%s):\n%s" % (code, " TIMEOUT" if to else "", text))
+
+    fp = ROOT / a.path
+    fp.parent.mkdir(parents=True, exist_ok=True)
+    fp.write_text(text, encoding="utf-8")
+
+    try:
+        rel_path = fp.relative_to(ROOT).as_posix()
+    except Exception:
+        rel_path = a.path.replace("\\", "/")
+
+    content = fp.read_bytes()
+    h = hashlib.sha256(content).hexdigest()
+    st.setdefault("fixtures", {})
+    st["fixtures"][rel_path] = {
+        "sha256": h,
+        "seam": a.seam,
+        "cmd": cmd,
+        "date": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    }
+    save_state(st)
+    led.append("fixture_capture", path=rel_path, seam=a.seam, cmd=cmd, sha256=h)
+    if JSON_MODE:
+        emit_json({"ok": True, "exit_code": 0, "status": "ok", "path": rel_path, "seam": a.seam, "cmd": cmd, "sha256": h}, code=0)
+    print("Fixture captured via '%s' -> %s (seam: %s, sha256: %s)" % (cmd, rel_path, a.seam, h))
+
+
 def cmd_signoff(a):
     cfg, st, led = ctx()
     check_approval_secret(cfg, a)
@@ -1923,6 +2096,12 @@ def cmd_coverage(a):
 
 def cmd_audit(a):
     cfg, st, led = ctx()
+    anchor_p = Path(a.anchor).resolve() if getattr(a, "anchor", None) else None
+    if anchor_p is not None or (ROOT / ".osr-anchor").exists():
+        ok, msg = led.verify_chain(anchor_path=anchor_p)
+        if not ok:
+            print("AUDIT: FAIL (ledger integrity check failed: %s)" % msg)
+            sys.exit(1)
     plan, errs = parse_plan()
     if errs:
         die("Plan invalid:\n  " + "\n  ".join(errs))
@@ -1949,10 +2128,30 @@ def cmd_audit(a):
             unchecked |= set(e["data"].get("unchecked", []))
     if unchecked:
         lines += ["", "## References with no mechanical check (UNVERIFIED)"] + ["- " + u for u in sorted(unchecked)[:40]]
+    seam_unverified = []
+    for t in ids:
+        c = parse_card(t)
+        if c.get("fixtures"):
+            conf_entries = [e for e in led.entries() if e.get("task") == t and e.get("type") == "verify" and e.get("data", {}).get("ok")]
+            has_conf = False
+            for ve in conf_entries:
+                for res in ve.get("data", {}).get("results", []):
+                    if res.get("name") == "conformance":
+                        has_conf = True
+                        break
+            if not has_conf:
+                seams_list = ", ".join(c.get("seams", [])) or "unnamed seam"
+                seam_unverified.append("Task %s seam(s) '%s': declared fixtures %s without confirmed conformance run" % (
+                    t, seams_list, ", ".join(c.get("fixtures", []))
+                ))
+    if seam_unverified:
+        lines += ["", "## Seams with missing conformance (UNVERIFIED)"] + ["- " + s for s in seam_unverified]
     ai("AUDIT.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
     print("\n".join(lines))
     bad = [r for r in rows if r[4] in ("UNCOVERED", "INCOMPLETE")] or notdone or not plan_ok
     pending = [r for r in rows if "PENDING-HUMAN" in r[4] or "UNVERIFIED" in r[4]]
+    if seam_unverified:
+        pending.append(("seams-conformance", "", "", "UNVERIFIED", ""))
     if bad:
         print("\nAUDIT: FAIL (gaps above)")
         sys.exit(1)
@@ -1989,7 +2188,8 @@ def cmd_next(a):
 
 
 def cmd_anchor(a):
-    anchor_path = Path(a.file).resolve() if getattr(a, "file", None) else (ROOT / ".osr-anchor")
+    anchor_arg = getattr(a, "out", None) or getattr(a, "file", None)
+    anchor_path = Path(anchor_arg).resolve() if anchor_arg else (ROOT / ".osr-anchor")
     led = Ledger()
     es = led.entries()
     if not es:
@@ -1998,8 +2198,10 @@ def cmd_anchor(a):
     data = {
         "seq": head["seq"],
         "head_hash": head["hash"],
+        "hash": head["hash"],
         "ts": head.get("ts", now()),
     }
+    anchor_path.parent.mkdir(parents=True, exist_ok=True)
     anchor_path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
     if JSON_MODE:
         emit_json({"ok": True, "exit_code": 0, "status": "ok", "anchor_file": str(anchor_path), "head_hash": head["hash"], "seq": head["seq"]}, code=0)
@@ -2218,6 +2420,10 @@ def main():
     p.add_argument("--note", required=True)
     p.add_argument("--extra-attempts", type=int, default=0)
     p.add_argument("--secret", default=None, help="approval secret (or set OSR_APPROVAL_SECRET)")
+    p = add("fixture-capture", cmd_fixture_capture, help="execute confirmed command to capture seam fixture")
+    p.add_argument("path", help="destination path for captured fixture file")
+    p.add_argument("--seam", required=True, help="seam id this fixture belongs to")
+    p.add_argument("--cmd", required=True, help="confirmed command that outputs fixture payload to stdout")
     p = add("fixture-add", cmd_fixture_add, help="register a captured seam fixture")
     p.add_argument("path", help="path to fixture file")
     p.add_argument("--seam", required=True, help="seam id this fixture belongs to")
@@ -2240,11 +2446,13 @@ def main():
     p.add_argument("--reason", required=True)
     p.add_argument("--secret", default=None, help="approval secret (or set OSR_APPROVAL_SECRET)")
     add("coverage", cmd_coverage, help="requirement to task to evidence matrix")
-    add("audit", cmd_audit, help="final traceability audit (writes .ai/AUDIT.md)")
+    p = add("audit", cmd_audit, help="final traceability audit (writes .ai/AUDIT.md)")
+    p.add_argument("--anchor", default=None, help="custom anchor file path to verify against")
     add("status", cmd_status, help="show state and write .ai/STATE.md")
     add("next", cmd_next, help="print the single next required action")
     p = add("anchor", cmd_anchor, help="record ledger head in an external anchor file (.osr-anchor)")
-    p.add_argument("--file", default=None, help="custom anchor file path (default: .osr-anchor)")
+    p.add_argument("--out", default=None, help="custom anchor output file path (default: .osr-anchor)")
+    p.add_argument("--file", default=None, help="alias for --out")
     p = add("ledger-verify", cmd_ledger_verify, help="check ledger integrity")
     p.add_argument("--anchor", default=None, help="custom anchor file path to verify against")
     p = add("review-pack", cmd_review_pack, help="bundle diff, task card, and criteria without builder rationale")
@@ -2254,6 +2462,7 @@ def main():
     p.add_argument("--verify", required=True, help="verification command to run")
     p.add_argument("--allowed", default=None, help="comma-separated list of allowed file patterns")
 
+    global ROOT, JSON_MODE
     a = ap.parse_args()
     if a.root:
         ROOT = Path(a.root).resolve()

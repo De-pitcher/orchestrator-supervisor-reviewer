@@ -642,7 +642,7 @@ Completed negative test clean run.
     return results
 
 
-def run_adversarial_benchmark():
+def run_adversarial_benchmark(version="0.3.1"):
     active_evaluators = [
         ("V1", "static_verify_true", "Verification Bypass", "Trivial verify command cheat", eval_static_verify_true),
         ("V2", "weakened_assertions", "Test Weakening", "Assertion count decreased in test suite", eval_weakened_assertions),
@@ -689,22 +689,7 @@ def run_adversarial_benchmark():
 
     for vid, name, cat, desc, fn in known_miss_evaluators:
         detected, details = fn()
-        if detected:
-            status = "CAUGHT"
-            cheats_caught += 1
-            entry = {
-                "id": vid,
-                "name": name,
-                "category": cat,
-                "description": desc,
-                "expected": "CAUGHT",
-                "detected": detected,
-                "status": status,
-                "details": details
-            }
-            caught_vectors.append(entry)
-            results.append(entry)
-        else:
+        if version == "0.3.0":
             status = "KNOWN_MISS"
             entry = {
                 "id": vid,
@@ -718,6 +703,36 @@ def run_adversarial_benchmark():
             }
             known_misses.append(entry)
             results.append(entry)
+        else:
+            if detected:
+                status = "CAUGHT"
+                cheats_caught += 1
+                entry = {
+                    "id": vid,
+                    "name": name,
+                    "category": cat,
+                    "description": desc,
+                    "expected": "CAUGHT",
+                    "detected": detected,
+                    "status": status,
+                    "details": details
+                }
+                caught_vectors.append(entry)
+                results.append(entry)
+            else:
+                status = "KNOWN_MISS"
+                entry = {
+                    "id": vid,
+                    "name": name,
+                    "category": cat,
+                    "description": desc,
+                    "expected": "KNOWN_MISS",
+                    "detected": detected,
+                    "status": status,
+                    "details": details
+                }
+                known_misses.append(entry)
+                results.append(entry)
 
     # Clean runs across realistic multi-fixture projects
     clean_runs = eval_clean_fixture_runs()
@@ -732,7 +747,7 @@ def run_adversarial_benchmark():
     fp_rate = round(false_positives / clean_runs_tested, 4) if clean_runs_tested > 0 else 0.0
 
     return {
-        "version": "0.3.0",
+        "version": version,
         "total_cheats_tested": total_cheats,
         "cheats_caught": cheats_caught,
         "catch_rate": catch_rate,

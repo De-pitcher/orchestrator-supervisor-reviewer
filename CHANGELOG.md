@@ -5,6 +5,35 @@ All notable changes to `orchestrator-supervisor-reviewer` (`osr`) will be docume
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2026-10-22
+
+### Added
+- **Stop Hook Schema Compliance (H12)**:
+  - Fixed `integrations/antigravity/stop_hook.py` to match the official Antigravity Stop hook JSON schema (`{"decision": "block", "reason": "..."}`).
+- **Fixture Provenance & Mandatory Conformance (H1, H2)**:
+  - Added `osr fixture-capture <path> --seam <id> --cmd "<command>"` executing confirmed commands to record tool-captured fixture stdout directly.
+  - Enforced that seams with fixtures without confirmed conformance runs report as `UNVERIFIED` in `osr audit` (exit code 2).
+  - Added detection of bogus seam authoritative sources declared in test/mock paths.
+- **Zero-Test Runner Output Detection (H6 / V12)**:
+  - Added test runner stdout parsing (`run_recorded`) detecting zero-test executions (`collected 0 items`, `no tests ran`, `Ran 0 tests`) and rejecting them as weak verify commands.
+  - Added `WEAK_VERIFY_PAT` in card validation rejecting token-check/grep verify commands.
+- **Tautological Assertion AST Checking (H5 / V11)**:
+  - Added Python AST inspection in `osr check` detecting constant assertions (`assert True`, `assertEqual(1, 1)`) and self-comparisons (`assert x == x`, `assertEqual(a, a)`).
+  - Added heuristic JavaScript regex detecting self-match assertions (`expect(x).toBe(x)`).
+- **Out-of-Band Ledger Anchoring (H11)**:
+  - Added `--out <path>` to `osr anchor` and `--anchor <path>` to `osr ledger-verify` and `osr audit` for secure out-of-band anchor verification.
+- **Heuristic Transparency & CI Matrix (H4, H7, H13, H14)**:
+  - Explicitly labeled all heuristic gates (`plan-check` keyword match, `unanchored-mock`, JS regex) as heuristics in warning/flag messages.
+  - Added Python 3.8 to `.github/workflows/test.yml` matrix.
+
+### Known Limitations
+- **In-Repo Trust Boundary**: In-repo anchors (`.osr-anchor`) do not protect against models with repository write access. Tamper-evident guarantees strictly require out-of-band anchor storage (`--out`).
+- **Semantic Mutation Limits**: AST checks detect direct constant and self-comparison assertions, but do not replace full dynamic mutation testing (`mutmut`) for arbitrary semantic vacuity.
+- **Non-Python / Non-JS Heuristics**: AST verification is implemented for Python standard library; JavaScript/TypeScript checks use regex heuristics. Other languages delegate to configured checkers.
+- **Negative Test Red/Green**: `negative_tests:` verifies that named tests executed in runner output, but does not prove the test failed prior to implementation without a runner history log.
+
+---
+
 ## [0.3.0] - 2026-10-21
 
 ### Added

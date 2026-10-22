@@ -68,7 +68,7 @@ Each phase has a gate the tool enforces. You cannot skip ahead because the next 
 
 **Phase 7, integrate.** After dependent tasks finish, run the integration task. Components that pass alone can fail together; do not skip this.
 
-**Phase 8, audit.** `osr audit` writes `.ai/AUDIT.md`: every requirement mapped to a task and evidence. Run `osr anchor` to commit the ledger head hash externally (e.g. `.osr-anchor` or git commit), detecting any subsequent ledger rollback. Exit 0 means all verified or human-signed. Exit 2 means finished, with items awaiting human sign-off. Exit 1 means gaps. Report the audit to the human as it is, including UNVERIFIED items and waivers.
+**Phase 8, audit.** `osr audit` writes `.ai/AUDIT.md`: every requirement mapped to a task and evidence. Run `osr anchor --out <external-path>` to commit the ledger head hash out-of-band (e.g. to a supervisor-controlled volume or CI artifact store). In-repo anchors (`.osr-anchor`) do not protect against models with repository write permissions; tamper-evidence requires out-of-band anchor verification via `osr ledger-verify --anchor <path>` and `osr audit --anchor <path>`. Exit 0 means all verified or human-signed. Exit 2 means finished, with items awaiting human sign-off. Exit 1 means gaps. Report the audit to the human as it is, including UNVERIFIED items and waivers.
 
 ## Scale the paperwork, never the gates
 

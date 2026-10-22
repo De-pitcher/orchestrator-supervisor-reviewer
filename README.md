@@ -67,8 +67,9 @@ To enforce guarantees mechanically across human and AI sessions:
    Prevents accidental commits when unverified tasks, scope violations, or broken ledger chains exist.
 3. **CI/CD Quality Gate**:
    Add `osr audit` and `osr ledger-verify` to your CI pipeline (`.github/workflows/test.yml` or `.gitlab-ci.yml`). Any manual unverified item (`Check: manual`) or ledger tampering halts the build.
-4. **External Ledger Anchoring**:
-   Run `osr anchor --to /secure/path/.osr-anchor`. The `.osr-anchor` file records the ledger head sequence and SHA-256 hash. For the tamper-evident guarantee against repository history rewrites to hold, this head **must be stored outside the repository** (e.g., in a supervisor-controlled volume or read-only S3 bucket) that the coding model cannot access.
+4. **External Ledger Anchoring & Trust Boundary**:
+   Run `osr anchor --out /secure/path/.osr-anchor` (or `--file <path>`). The anchor file records the ledger head sequence and SHA-256 hash.
+   > **Trust Boundary & Threat Model**: An in-repo anchor file (`.osr-anchor` inside the workspace) does **not** protect against an agent or builder with repository write access, as the agent can rewrite both `.ai/ledger.jsonl` and `.osr-anchor` simultaneously. Tamper-evidence against in-workspace actors strictly requires **out-of-band anchor storage** (e.g. in a supervisor-controlled volume, read-only CI artifact store, or external vault) that the coding agent cannot write to. Verify against the external anchor using `osr ledger-verify --anchor /secure/path/.osr-anchor` and `osr audit --anchor /secure/path/.osr-anchor`.
 
 ## Quick start
 
@@ -177,11 +178,16 @@ When testing against cross-boundary interfaces:
 
 ```
 ==============================================================================
-OSR ADVERSARIAL BENCHMARK REPORT (v0.3.0)
+OSR ADVERSARIAL BENCHMARK REPORT (v0.3.1 Hardened)
 ==============================================================================
-Active Defense Catch Rate: 100.0% (10/10 active vectors caught)
-Known Misses / Backlog:    2 vectors (V11 tautological assertion, V12 weak verify)
-False Positive Rate:       0.0% (0/11 clean fixture projects)
+Benchmark Catch Rate:     100.0% (12 of 12 vectors caught in v0.3.1; v0.3.0 baseline was 10 of 12)
+Known Misses / Backlog:   0 unmitigated benchmark vectors (2 caught in v0.3.1: V11 AST & V12 runner check)
+Clean Canary Pass Rate:   100.0% (0 false positives across 11 clean canary projects)
+
+Note on Honest Denominators & Boundaries:
+- In v0.3.0, 10 of 12 vectors were caught with 2 known misses (V11, V12).
+- In v0.3.1, all 12 seeded benchmark vectors are caught by mechanical gates.
+- Residual limitation: Python AST and JS regex catch common tautologies, but full semantic mutation testing requires dedicated external tools (e.g. mutmut). Non-Python test runners outside unittest/pytest/jest require confirmed custom checkers.
 ==============================================================================
 ```
 Run the suite anytime: `python -m evals.eval_suite`.

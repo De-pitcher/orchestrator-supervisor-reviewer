@@ -1,13 +1,13 @@
 {
-  "plan_hash": "3e394cb56ec13bbdd6236742c5d62ded1c1a3746a626cf18168750904ec2e0fc",
+  "plan_hash": "e5db1de7985f83443864825f130c5ed8a660bb8420b3f1e0ee90b81c20ce6051",
   "tasks": {
     "T1": {
       "status": "done",
-      "attempts": 1,
+      "attempts": 2,
       "failures": 1,
       "model": "gemini-3.8-flash",
-      "input_hash": "4c7fbcd22a13fa91ab8e719d23d13c8e7e186dd6d62fcaf8748360f96225306b",
-      "triaged_attempt": 0,
+      "input_hash": "0f7cabc67fe74f2a03743e4a2663191982a55c37280cc63263c416cf44d04e1a",
+      "triaged_attempt": 1,
       "blocked": null,
       "requires": null,
       "extra_attempts": 0,
@@ -15,22 +15,22 @@
         "test": {
           "ok": true,
           "exit": 0,
-          "sha": "f1f5b7c52a761067e442e5a8b45450d157c8943084fa8e9d2041d0f41dade2b7"
+          "sha": "00f31f93744bbf4feb063d4898599ef8c62a523d52a3463e91f35eb7de45b4fa"
         },
         "task_0": {
-          "cmd": "python -m unittest discover -s tests -v",
+          "cmd": "python -m unittest tests.test_stop_hook -v",
           "ok": true,
           "exit": 0,
-          "sha": "e2ec2b3759e745ad16e21e7d2286016c438ad687106c8618732d0a6fe687aa44"
+          "sha": "37db70fbdbc7afb7c250c547f0da39b8a28f0aab43908b189795044a2ba9fffa"
         }
       }
     },
     "T2": {
       "status": "done",
       "attempts": 1,
-      "failures": 0,
+      "failures": 1,
       "model": "gemini-3.8-flash",
-      "input_hash": "7ec38f162ac56046f116130acc66a8a3d2f6bac6068e02adbb090aac6ff8f7a6",
+      "input_hash": "841821ac9dc1047ef9bef6cdd5d442bb60854b7658829a5a9cada24b508d5998",
       "triaged_attempt": 0,
       "blocked": null,
       "requires": null,
@@ -39,22 +39,22 @@
         "test": {
           "ok": true,
           "exit": 0,
-          "sha": "6f36caab23acc7b52e0354548147e7221bdf10a754adda42f87343b1d22d8206"
+          "sha": "63309f97842229603ea3eb58d64261f62c79359f2fd108956236dd0a26fa9cdc"
         },
         "task_0": {
-          "cmd": "python -m unittest discover -s tests -v",
-          "ok": true,
-          "exit": 0,
-          "sha": "96942f231a76bc3f38920bf3721008130135ac68ec4f9cd996161d60b0b71c4d"
+          "cmd": "python -m unittest tests.test_fixture_capture -v",
+          "ok": false,
+          "exit": 1,
+          "sha": "19c34c4bf9a83bf94ae9b09808f48c0913419c3a90acb982f34c7b69f794ad15"
         }
       }
     },
     "T3": {
       "status": "done",
       "attempts": 1,
-      "failures": 0,
+      "failures": 1,
       "model": "gemini-3.8-flash",
-      "input_hash": "107d30585ab411034f7492f6ac133183f42bf82d50492633a78cb9b01d21d873",
+      "input_hash": "fb51798d3dd1fb405b6fb82816ae56a6baa5d290c48d6fe250315ebf1a586702",
       "triaged_attempt": 0,
       "blocked": null,
       "requires": null,
@@ -63,13 +63,13 @@
         "test": {
           "ok": true,
           "exit": 0,
-          "sha": "ae315d0876a26b78968a0f211f8b685a27c1e01d092f17e9b88c44150c45e37a"
+          "sha": "acbbde04ee057988477a1e6e87476ce45cdbd6970ebc4e7d948a9f7568742a33"
         },
         "task_0": {
-          "cmd": "python -m unittest discover -s tests -v",
-          "ok": true,
-          "exit": 0,
-          "sha": "8271e29d99882b322b4107db400e11b502aace01291783e6ed18d25db38b080d"
+          "cmd": "python -m unittest tests.test_zero_runner -v",
+          "ok": false,
+          "exit": 1,
+          "sha": "d14f85f3a6d0af568d29c96caee973c040872c09aaedf22cf50c24c034e4eaf0"
         }
       }
     },
@@ -77,56 +77,56 @@
       "status": "done",
       "attempts": 1,
       "failures": 1,
-      "model": "gemini-3.8-pro",
-      "input_hash": "d7883d149f297a45ea8166a0a6ea987498c1d2104e9dab14f39af2ce2f51c406",
+      "model": "gemini-3.8-flash",
+      "input_hash": "257f2c24a984d2cf5e4c847199353a02fb6e96a137210a493f7eae1bbd370a33",
       "triaged_attempt": 0,
       "blocked": null,
       "requires": null,
       "extra_attempts": 0,
       "baseline": {
         "test": {
-          "ok": false,
-          "exit": 1,
-          "sha": "ab6c38284d147c8d8cca3621b65468f46f29bedd9b8658d584c6a5eef9c5bd25"
+          "ok": true,
+          "exit": 0,
+          "sha": "2c7ddecae9357b04d5a86958215aa765210b1d886b7c79191a801573d6ef27c6"
         },
         "task_0": {
-          "cmd": "python -m unittest discover -s tests -v",
+          "cmd": "python -m unittest tests.test_tautological_ast -v",
           "ok": false,
           "exit": 1,
-          "sha": "63e3b8e73edd9a75d4d63d7e0a48106b49fcf5b96af4a89e1ba3a7e6a24f0c4e"
+          "sha": "cfb6d5f2536bf2c0321926cf2e05f759bd411a3d1bebe9c364d5efbd99384ccc"
         }
       }
     },
     "T5": {
       "status": "done",
       "attempts": 1,
-      "failures": 1,
-      "model": "gemini-3.8-pro",
-      "input_hash": "f7e0c38f31eaf8ccf486a8402e17a49bc32543ade086e4f778cbee970f41fc25",
+      "failures": 0,
+      "model": "gemini-3.8-flash",
+      "input_hash": "ef0ef7733d90f938d20f5b21936ef0469222b088bb5f5ee5fc68b2a9bcd6a315",
       "triaged_attempt": 0,
       "blocked": null,
       "requires": null,
       "extra_attempts": 0,
       "baseline": {
         "test": {
-          "ok": false,
-          "exit": 1,
-          "sha": "98f404b31d3578c5b592b87eb94e7681da6036022dc114b4cf50824bceca9094"
+          "ok": true,
+          "exit": 0,
+          "sha": "4c62512193b720df65216f0484577e301f2e170a197126c47a5c764e1ab19b3b"
         },
         "task_0": {
-          "cmd": "python -m unittest discover -s tests -v",
+          "cmd": "python -m unittest tests.test_anchor_ext -v",
           "ok": false,
           "exit": 1,
-          "sha": "b6733d1e48fbf6cd2820b77e756fd58ac8267f6ab62622e1041b206053eef504"
+          "sha": "4f54ebb5aa67c5a390e9e480c53abfa3ac285ccc1b7ac994de50d5f020497374"
         }
       }
     },
     "T6": {
       "status": "done",
       "attempts": 1,
-      "failures": 0,
-      "model": "gemini-3.8-pro",
-      "input_hash": "d1e2aae50aae93d21cfd8f5f38e9a7291f81edd9fb8b8987e3dfd5009d4ed3d8",
+      "failures": 1,
+      "model": "gemini-3.8-flash",
+      "input_hash": "71564f8f00ec692ffbe037339c95999fdfaf6a7d5abf8e445d97a9420cbf0915",
       "triaged_attempt": 0,
       "blocked": null,
       "requires": null,
@@ -135,13 +135,13 @@
         "test": {
           "ok": true,
           "exit": 0,
-          "sha": "73f656073b4e4e2a0d78b7391e0f62a6f60c7be2e70dbe5a170b18a4a9431d85"
+          "sha": "17e00e228de85c0c7a4668ff5edd71668b1398c35721656bbcf96f498487ae6f"
         },
         "task_0": {
-          "cmd": "python -m unittest discover -s tests -v",
-          "ok": true,
-          "exit": 0,
-          "sha": "2ca356a24a6e1cf1eb8258f2d9c40c4f7c9ea3238aefe3cc7df6a9fc434fe8b4"
+          "cmd": "python -m unittest tests.test_honest_reporting -v",
+          "ok": false,
+          "exit": 1,
+          "sha": "d145f30267093c924faefa9dbc0675af16f507784084a3400f671b2d16e03cc5"
         }
       }
     },
@@ -170,7 +170,14 @@
       }
     }
   },
-  "waivers": [],
+  "waivers": [
+    {
+      "task": "T1",
+      "flag": "unanchored-mock:tests/test_hardening_hypotheses.py",
+      "reason": "tests/test_hardening_hypotheses.py is the Phase B adversarial test suite testing mock evasion across hypotheses, not an unanchored mock for T1",
+      "approved_by": null
+    }
+  ],
   "signoffs": {},
   "config_hash": "bb541d449833ac034f127b3987619424ea8452694f8c6c8cd953b0fd0f672ad9",
   "fixtures": {}
