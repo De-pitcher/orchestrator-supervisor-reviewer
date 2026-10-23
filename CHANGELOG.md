@@ -5,6 +5,89 @@ All notable changes to `orchestrator-supervisor-reviewer` (`osr`) will be docume
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Evidence hardening — 2026-10-23–24
+
+Completed the T22–T27 packet against requirements R20–R25. This is an
+unreleased change set; the package version remains **0.3.1**. The broader
+v0.3.2 roadmap is still deferred.
+
+### Fixed
+- **T22 / R20 — retained command logs:** unique run identities, exclusive binary
+  log creation, bounded collision retries, exact UTF-8 bytes and SHA-256 digests.
+  Failed and timed-out commands retain output, and ledger results identify each
+  command's own log.
+- **T23 / R21 — command authorization:** require an exact confirmed command
+  after trimming outer whitespace. Arguments, quoting, internal whitespace and
+  shell suffixes no longer inherit executable-wide permission. Failed
+  reconfirmation revokes earlier success; quick verification and fixture capture
+  reject stale approval/configuration and unauthorized execution.
+- **T24 / R22 — current test evidence:** stop scanning historical XML reports;
+  validate retained-log hashes and exclude failed commands. Match canonical
+  identities exactly, preserve pytest parameters and reject missing or ambiguous
+  short declarations. Acceptance tags retain nested brackets rather than
+  silently dropping declarations.
+- **T25 / R23 — completion freshness:** bind approval baselines, task starts,
+  verification, reviews and completed deltas to governed content. Reject
+  pre-start drift, mid-verification writes, stale cards, conflicting records and
+  interrupted persistence. Replay accepted overlapping deltas, support cold
+  replay without snapshot caches and revalidate state at lock boundaries.
+  Genuine legacy closures remain explicitly UNVERIFIED without current credit.
+- **T26 / R24 — staged artifact checks:** use read-only `audit --check` and
+  complete governed-index comparison, including required governance evidence.
+  Reject partial staging, stale/index-only content, unsupported transformations
+  and governance aliases. Preserve worktree cwd in both documented wrapper
+  layouts. Identical supported binary bytes pass; only Git-recognized text
+  permits narrowly defined CRLF/LF equivalence.
+
+### Changed
+- **T27 / R25 — integration:** migrated fixtures to real approval lineage and
+  exact command confirmation without removing tests or weakening rejection
+  assertions. Bootstrap fixtures preserve caller files and introduce new
+  behavior after task start. Benchmark consumers share one captured report.
+- Corrected documentation about actor labels, optional approval secrets,
+  external anchors, hook bypasses, governed-file coverage and parser limits.
+- Preserved superseded plans, cards, snapshots and ledger history. Approval
+  epoch 298 establishes the new baseline; historical completions are disclosed
+  without supplying current requirement credit.
+
+### Carried-forward baseline work
+- Retained package metadata alignment to 0.3.1, sub-requirement ID parsing,
+  benchmark caching/version-test repairs, the skill synchronization utility and
+  its tests, and the manual terminal assessment script. These preceded the
+  evidence-hardening implementation and were included in its approved baseline.
+
+### Validation record
+- Independent supervisor spec and quality reviews accepted T27; it closed at
+  ledger sequence **325**, following formal verification at **322**.
+- The final integration inventory contains **249 distinct tests**: 171 in five
+  formal focused modules and 78 in eight supplementary batches. Every ID ran
+  exactly once in that schedule; all passed on one unchanged governed tree.
+- The single final benchmark execution caught **12/12 attacks**, with **11 clean
+  canaries and zero false positives**. Final acceptance audit verified R20–R25
+  and ledger integrity. These are local results, not remote CI results.
+- Source records: [independent evidence](.ai/reviews/T27.final-evidence.supervisor/independent-audit.json),
+  [batch inventory and results](.ai/reviews/T27.final-evidence.supervisor/run-summary.json),
+  and [acceptance audit](.ai/AUDIT.md). Historical release dates below follow
+  local Git history; existing release entries describe their state at release.
+
+### Known limitations and deferred work
+- Validation used Windows and Python 3.14.3. Native Linux/macOS, other Python
+  versions and remote CI were not verified by this packet.
+- Standard verbose unittest output with method docstrings can split identity and
+  status across lines. The current parser conservatively omits those named
+  identities: 171 formal tests executed, while 148 canonical IDs were recorded.
+  Multiline parser support is deferred.
+- Git hooks remain bypassable with `--no-verify`; `allow_no_commands` remains an
+  explicit compatibility escape. Neither is a security boundary.
+- `--by` is self-reported, the approval secret is optional, and harness hooks do
+  not authenticate actors. An external anchor only protects its pinned ledger
+  prefix when independently compared; it does not establish truth of later
+  entries or protect tooling writable by the same actor.
+- XML-only runner discovery, actor-authentication redesign and broader v0.3.2
+  release features remain deferred. No publication or version bump is implied.
+
 ## [0.3.1] - 2026-10-22
 
 ### Added
@@ -81,3 +164,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Git pre-commit enforcement hook (`integrations/git/pre_commit.py`).
 - 8-vector adversarial regression benchmark suite in `evals/`.
 - Full CLI command suite for task lifecycles, reviews, waivers, and audit trails.
+
+---
+
+## [0.1.0] - 2026-10-21
+
+### Added
+- Initial Orchestrator, Supervisor, Reviewer skill and standard-library Python
+  CLI: task cards, scoped changes, verification, spec/quality review, completion,
+  failure triage and requirement audits backed by a hash-chained ledger.
+- Skill instructions, task/review templates and reference guides establishing
+  the principle that command evidence, rather than an agent's assertion,
+  determines completion.
+
+Historical source: initial release commit `b00e5cd`. Subsequent roadmap phases
+are summarized under 0.2.0 and 0.3.0; v0.3.1 hardening is commit `769b307`.

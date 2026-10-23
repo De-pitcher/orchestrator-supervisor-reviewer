@@ -1,0 +1,4 @@
+PASS tests/example.test.js
+  ? example test (5 ms)
+Tests:       1 passed, 1 total
+

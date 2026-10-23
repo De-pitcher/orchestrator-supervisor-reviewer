@@ -1,2 +1,50 @@
 #!/bin/sh
-python integrations/git/pre_commit.py
+# Git pre-commit wrapper.
+#
+# Supported layouts:
+#   .git/hooks/pre-commit  + .git/hooks/pre_commit.py   (copied pair)
+#   .git/hooks/pre-commit  + integrations/git/pre_commit.py
+# Unsupported layouts fail loudly; they must never pass silently.
+#
+# The wrapper directory is resolved in a subshell so Git's invoking worktree cwd
+# is preserved for the helper. The helper verifies Path.cwd(), so leaving the
+# process in .git/hooks would let it mistake an initialized project for one with
+# no .ai workflow and pass every commit.
+set -u
+
+wrapper_dir=$(
+    cd "$(dirname "$0")" 2>/dev/null && pwd
+) || {
+    echo "PRE-COMMIT ERROR: cannot resolve the wrapper directory for pre_commit.py." >&2
+    exit 1
+}
+
+helper=
+if [ -f "$wrapper_dir/pre_commit.py" ]; then
+    helper=$wrapper_dir/pre_commit.py
+elif [ -f "$wrapper_dir/../../integrations/git/pre_commit.py" ]; then
+    helper=$wrapper_dir/../../integrations/git/pre_commit.py
+else
+    top=$(git rev-parse --show-toplevel 2>/dev/null) || top=
+    if [ -n "$top" ] && [ -f "$top/integrations/git/pre_commit.py" ]; then
+        helper=$top/integrations/git/pre_commit.py
+    elif [ -f "integrations/git/pre_commit.py" ]; then
+        helper=integrations/git/pre_commit.py
+    fi
+fi
+
+if [ -z "$helper" ]; then
+    echo "PRE-COMMIT ERROR: cannot locate pre_commit.py beside this wrapper or at integrations/git/pre_commit.py." >&2
+    exit 1
+fi
+
+if command -v python >/dev/null 2>&1; then
+    exec python "$helper" "$@"
+elif command -v python3 >/dev/null 2>&1; then
+    exec python3 "$helper" "$@"
+elif command -v py >/dev/null 2>&1; then
+    exec py -3 "$helper" "$@"
+fi
+
+echo "PRE-COMMIT ERROR: cannot find a Python interpreter to run pre_commit.py." >&2
+exit 1

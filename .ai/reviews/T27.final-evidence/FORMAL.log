@@ -1,0 +1,233 @@
+# T27 FORMAL osr verify
+argv: ["C:\\Python314\\python.exe", "scripts/osr.py", "verify", "T27"]
+cwd: C:\Users\sam\Documents\sparkz\orchestrator-supervisor-reviewer
+exit: 0
+elapsed_seconds: 135.181
+tree_digest_before: b17deff95afe64050a38b2d24c0181972d2831ab32f85cf1884d0cf5e5c696fd
+tree_digest_after: b17deff95afe64050a38b2d24c0181972d2831ab32f85cf1884d0cf5e5c696fd
+freeze_digest: b17deff95afe64050a38b2d24c0181972d2831ab32f85cf1884d0cf5e5c696fd
+formal_ids: 171
+run_lines:
+[exit 0 | 5.8s | run 4be69617ec434328861afb80fae44fcd | log .ai/logs/20261023-220131-0000-T27-task-4be69617ec434328861afb80fae44fcd.log]
+[exit 0 | 3.4s | run 0a3cd6770f9c47dbb3dff13d64b2bec9 | log .ai/logs/20261023-220135-0000-T27-task-0a3cd6770f9c47dbb3dff13d64b2bec9.log]
+[exit 0 | 11.1s | run ba331f6e591247ddac308c365e734252 | log .ai/logs/20261023-220146-0000-T27-task-ba331f6e591247ddac308c365e734252.log]
+[exit 0 | 18.5s | run 6b8111d3e0cd41dc95ff4ca4910210f5 | log .ai/logs/20261023-220205-0000-T27-task-6b8111d3e0cd41dc95ff4ca4910210f5.log]
+[exit 0 | 94.5s | run 54aa4184669a422a9aae2ce71c2d2e58 | log .ai/logs/20261023-220339-0000-T27-task-54aa4184669a422a9aae2ce71c2d2e58.log]
+
+===== STDOUT =====
+Changed files: 11
+  M README.md
+  M evals/eval_suite.py
+  M integrations/README.md
+  M references/guarantees.md
+  M tests/test_command_authorization.py
+  M tests/test_hardening_hypotheses.py
+  M tests/test_osr.py
+  M tests/test_run_logs.py
+  M tests/test_tautological_ast.py
+  M tests/test_test_evidence.py
+  M tests/test_zero_runner.py
+CHECK: PASS
+
+$ python -m unittest discover -s tests -p test_run_logs.py -v
+test_confirm_ledger_records_run_identity (test_run_logs.TestLedgerWiring.test_confirm_ledger_records_run_identity) ... ok
+test_start_ledger_baseline_records_run_identity (test_run_logs.TestLedgerWiring.test_start_ledger_baseline_records_run_identity) ... ok
+test_verify_ledger_records_run_identity_and_rereads_each_log (test_run_logs.TestLedgerWiring.test_verify_ledger_records_run_identity_and_rereads_each_log) ... ok
+test_clean_control_retained_log_digest (test_run_logs.TestRunLogsCleanControl.test_clean_control_retained_log_digest) ... ok
+test_crlf_payload_is_not_double_translated (test_run_logs.TestRunLogsCommandOutput.test_crlf_payload_is_not_double_translated) ... ok
+test_downstream_reread_of_each_command_log_is_independent (test_run_logs.TestRunLogsCommandOutput.test_downstream_reread_of_each_command_log_is_independent) ... ok
+test_failed_command_retains_stdout_stderr_and_digest (test_run_logs.TestRunLogsCommandOutput.test_failed_command_retains_stdout_stderr_and_digest) ... ok
+test_recorded_metadata_is_complete_and_ledger_serializable (test_run_logs.TestRunLogsCommandOutput.test_recorded_metadata_is_complete_and_ledger_serializable) ... ok
+test_successful_command_lf_payload_exact_bytes (test_run_logs.TestRunLogsCommandOutput.test_successful_command_lf_payload_exact_bytes) ... ok
+test_timeout_output_is_retained (test_run_logs.TestRunLogsCommandOutput.test_timeout_output_is_retained) ... ok
+test_two_same_label_recorded_commands_keep_own_digest (test_run_logs.TestRunLogsCommandOutput.test_two_same_label_recorded_commands_keep_own_digest) ... ok
+test_unicode_payload_exact_bytes (test_run_logs.TestRunLogsCommandOutput.test_unicode_payload_exact_bytes) ... ok
+test_concurrent_same_label_writers_retain_every_payload (test_run_logs.TestRunLogsImmutability.test_concurrent_same_label_writers_retain_every_payload) ... ok
+test_exhausted_retries_fail_and_preserve_existing_bytes (test_run_logs.TestRunLogsImmutability.test_exhausted_retries_fail_and_preserve_existing_bytes) ... ok
+test_frozen_clock_same_label_writes_keep_both_outputs (test_run_logs.TestRunLogsImmutability.test_frozen_clock_same_label_writes_keep_both_outputs) ... ok
+test_repeated_candidate_is_retried_not_overwritten (test_run_logs.TestRunLogsImmutability.test_repeated_candidate_is_retried_not_overwritten) ... ok
+test_run_ids_are_nonempty_and_unique (test_run_logs.TestRunLogsImmutability.test_run_ids_are_nonempty_and_unique) ... ok
+test_same_label_rapid_writes_keep_both_outputs (test_run_logs.TestRunLogsImmutability.test_same_label_rapid_writes_keep_both_outputs) ... ok
+test_sequence_hint_separates_same_label_writes (test_run_logs.TestRunLogsImmutability.test_sequence_hint_separates_same_label_writes) ... ok
+
+----------------------------------------------------------------------
+Ran 19 tests in 5.519s
+
+OK
+[exit 0 | 5.8s | run 4be69617ec434328861afb80fae44fcd | log .ai/logs/20261023-220131-0000-T27-task-4be69617ec434328861afb80fae44fcd.log]
+
+$ python -m unittest discover -s tests -p test_command_authorization.py -v
+test_clean_control_exact_confirmed_command (test_command_authorization.TestCommandAuthorizationCleanControl.test_clean_control_exact_confirmed_command) ... ok
+test_allow_no_commands_still_permits_execution (test_command_authorization.TestCompatibilityEscape.test_allow_no_commands_still_permits_execution) ... ok
+test_case_difference_is_rejected (test_command_authorization.TestExactCommandAuthorization.test_case_difference_is_rejected) ... ok
+test_different_argument_list_is_rejected (test_command_authorization.TestExactCommandAuthorization.test_different_argument_list_is_rejected) ... ok
+test_different_executable_is_rejected (test_command_authorization.TestExactCommandAuthorization.test_different_executable_is_rejected) ... ok
+test_different_module_is_rejected (test_command_authorization.TestExactCommandAuthorization.test_different_module_is_rejected) ... ok
+test_different_script_same_executable_is_rejected (test_command_authorization.TestExactCommandAuthorization.test_different_script_same_executable_is_rejected) ... ok
+test_empty_command_is_rejected (test_command_authorization.TestExactCommandAuthorization.test_empty_command_is_rejected) ... ok
+test_internal_whitespace_difference_is_not_equivalent (test_command_authorization.TestExactCommandAuthorization.test_internal_whitespace_difference_is_not_equivalent) ... ok
+test_outer_whitespace_is_trimmed (test_command_authorization.TestExactCommandAuthorization.test_outer_whitespace_is_trimmed) ... ok
+test_quoted_and_unquoted_executable_are_not_equivalent (test_command_authorization.TestExactCommandAuthorization.test_quoted_and_unquoted_executable_are_not_equivalent) ... ok
+test_redirection_and_pipeline_are_rejected (test_command_authorization.TestExactCommandAuthorization.test_redirection_and_pipeline_are_rejected) ... ok
+test_shell_suffix_is_rejected (test_command_authorization.TestExactCommandAuthorization.test_shell_suffix_is_rejected) ... ok
+test_confirmed_config_name_is_still_accepted (test_command_authorization.TestFixtureCaptureAuthorization.test_confirmed_config_name_is_still_accepted) ... ok
+test_different_script_same_executable_is_not_captured (test_command_authorization.TestFixtureCaptureAuthorization.test_different_script_same_executable_is_not_captured) ... ok
+test_exact_confirmed_raw_command_is_captured (test_command_authorization.TestFixtureCaptureAuthorization.test_exact_confirmed_raw_command_is_captured) ... ok
+test_changed_config_command_invalidates_old_confirmation (test_command_authorization.TestMissingConfirmation.test_changed_config_command_invalidates_old_confirmation) ... ok
+test_config_verified_without_ledger_record_is_rejected (test_command_authorization.TestMissingConfirmation.test_config_verified_without_ledger_record_is_rejected) ... ok
+test_empty_configuration_rejects (test_command_authorization.TestMissingConfirmation.test_empty_configuration_rejects) ... ok
+test_failed_confirmation_does_not_authorize (test_command_authorization.TestMissingConfirmation.test_failed_confirmation_does_not_authorize) ... ok
+test_failed_reconfirmation_supersedes_earlier_success (test_command_authorization.TestMissingConfirmation.test_failed_reconfirmation_supersedes_earlier_success) ... ok
+test_no_confirmed_commands_rejects_even_exact_config_command (test_command_authorization.TestMissingConfirmation.test_no_confirmed_commands_rejects_even_exact_config_command) ... ok
+test_unverified_config_entry_with_ledger_record_is_rejected (test_command_authorization.TestMissingConfirmation.test_unverified_config_entry_with_ledger_record_is_rejected) ... ok
+test_broken_ledger_chain_is_rejected (test_command_authorization.TestQuickAuthorization.test_broken_ledger_chain_is_rejected) ... ok
+test_exact_confirmed_command_passes (test_command_authorization.TestQuickAuthorization.test_exact_confirmed_command_passes) ... ok
+test_exact_confirmed_command_passes_without_plan_approval (test_command_authorization.TestQuickAuthorization.test_exact_confirmed_command_passes_without_plan_approval) ... ok
+test_failed_reconfirmation_supersedes_prior_success (test_command_authorization.TestQuickAuthorization.test_failed_reconfirmation_supersedes_prior_success) ... ok
+test_no_ledger_confirmation_is_rejected (test_command_authorization.TestQuickAuthorization.test_no_ledger_confirmation_is_rejected) ... ok
+test_quick_does_not_create_task_completion_evidence (test_command_authorization.TestQuickAuthorization.test_quick_does_not_create_task_completion_evidence) ... ok
+test_trivial_command_is_rejected_even_if_confirmed (test_command_authorization.TestQuickAuthorization.test_trivial_command_is_rejected_even_if_confirmed) ... ok
+test_unconfirmed_different_script_is_not_executed (test_command_authorization.TestQuickAuthorization.test_unconfirmed_different_script_is_not_executed) ... ok
+test_unconfirmed_shell_suffix_is_rejected (test_command_authorization.TestQuickAuthorization.test_unconfirmed_shell_suffix_is_rejected) ... ok
+test_weak_command_is_rejected_even_if_confirmed (test_command_authorization.TestQuickAuthorization.test_weak_command_is_rejected_even_if_confirmed) ... ok
+test_exact_confirmed_card_command_starts_and_verifies (test_command_authorization.TestStartVerifyAuthorization.test_exact_confirmed_card_command_starts_and_verifies) ... ok
+test_unconfirmed_attack_command_is_never_executed (test_command_authorization.TestStartVerifyAuthorization.test_unconfirmed_attack_command_is_never_executed) ... ok
+
+----------------------------------------------------------------------
+Ran 44 tests in 3.129s
+
+OK
+[exit 0 | 3.4s | run 0a3cd6770f9c47dbb3dff13d64b2bec9 | log .ai/logs/20261023-220135-0000-T27-task-0a3cd6770f9c47dbb3dff13d64b2bec9.log]
+
+$ python -m unittest discover -s tests -p test_test_evidence.py -v
+test_deeper_bracket_identity_is_supported_literally (test_test_evidence.TestAcceptanceDeclarationTags.test_deeper_bracket_identity_is_supported_literally) ... ok
+test_deeper_parameter_declaration_keeps_the_complete_identity (test_test_evidence.TestAcceptanceDeclarationTags.test_deeper_parameter_declaration_keeps_the_complete_identity) ... ok
+test_nested_parameter_declaration_satisfies_the_gate (test_test_evidence.TestAcceptanceDeclarationTags.test_nested_parameter_declaration_satisfies_the_gate) ... ok
+test_outermost_declarations_keep_complete_identities (test_test_evidence.TestAcceptanceDeclarationTags.test_outermost_declarations_keep_complete_identities) ... ok
+test_pytest_path_declaration_creates_a_failing_acceptance_gate (test_test_evidence.TestAcceptanceDeclarationTags.test_pytest_path_declaration_creates_a_failing_acceptance_gate) ... ok
+test_unsupported_declared_form_rejects_with_a_diagnostic (test_test_evidence.TestAcceptanceDeclarationTags.test_unsupported_declared_form_rejects_with_a_diagnostic) ... ok
+test_whitespace_parameter_declaration_creates_a_failing_gate (test_test_evidence.TestAcceptanceDeclarationTags.test_whitespace_parameter_declaration_creates_a_failing_gate) ... ok
+test_ambiguous_class_style_short_declaration_rejects (test_test_evidence.TestClassStyleUnittestQualifiers.test_ambiguous_class_style_short_declaration_rejects) ... ok
+test_captured_unittest_fixture_identity_is_canonical (test_test_evidence.TestClassStyleUnittestQualifiers.test_captured_unittest_fixture_identity_is_canonical) ... ok
+test_exact_class_style_declaration_resolves (test_test_evidence.TestClassStyleUnittestQualifiers.test_exact_class_style_declaration_resolves) ... ok
+test_supplied_current_output_is_still_parsed (test_test_evidence.TestCurrentRunControls.test_supplied_current_output_is_still_parsed) ... ok
+test_unambiguous_short_name_passes_verify_and_gates (test_test_evidence.TestCurrentRunControls.test_unambiguous_short_name_passes_verify_and_gates) ... ok
+test_different_dotted_parameter_rejects (test_test_evidence.TestDottedParameterEvidence.test_different_dotted_parameter_rejects) ... ok
+test_exact_and_short_dotted_parameter_declarations_pass (test_test_evidence.TestDottedParameterEvidence.test_exact_and_short_dotted_parameter_declarations_pass) ... ok
+test_terminal_name_preserves_dotted_parameter (test_test_evidence.TestDottedParameterIdentity.test_terminal_name_preserves_dotted_parameter) ... ok
+test_failed_command_test_names_are_not_passes (test_test_evidence.TestFailedCommandEvidence.test_failed_command_test_names_are_not_passes) ... ok
+test_missing_declared_negative_test_fails_verify (test_test_evidence.TestMissingNegativeTest.test_missing_declared_negative_test_fails_verify) ... ok
+test_bare_identity_does_not_hide_a_same_name_collision (test_test_evidence.TestMixedBareAndQualifiedEvidence.test_bare_identity_does_not_hide_a_same_name_collision) ... ok
+test_derived_aliases_are_not_canonical_identities (test_test_evidence.TestMixedBareAndQualifiedEvidence.test_derived_aliases_are_not_canonical_identities) ... ok
+test_mixed_evidence_keeps_the_genuine_bare_pass (test_test_evidence.TestMixedBareAndQualifiedEvidence.test_mixed_evidence_keeps_the_genuine_bare_pass) ... ok
+test_captured_pytest_qualified_id_is_recognised (test_test_evidence.TestParameterizedIdentities.test_captured_pytest_qualified_id_is_recognised) ... ok
+test_different_parameter_identity_does_not_satisfy (test_test_evidence.TestParameterizedIdentities.test_different_parameter_identity_does_not_satisfy) ... ok
+test_exact_parameter_identity_satisfies_the_gate (test_test_evidence.TestParameterizedIdentities.test_exact_parameter_identity_satisfies_the_gate) ... ok
+test_short_negative_declaration_is_ambiguous_end_to_end (test_test_evidence.TestSameTerminalNameBareAndQualified.test_short_negative_declaration_is_ambiguous_end_to_end) ... ok
+test_directory_xml_is_not_scanned_for_current_evidence (test_test_evidence.TestStaleXmlEvidence.test_directory_xml_is_not_scanned_for_current_evidence) ... ok
+test_stale_xml_cannot_satisfy_a_current_acceptance_gate (test_test_evidence.TestStaleXmlEvidence.test_stale_xml_cannot_satisfy_a_current_acceptance_gate) ... ok
+test_stale_xml_cannot_satisfy_a_current_negative_test (test_test_evidence.TestStaleXmlEvidence.test_stale_xml_cannot_satisfy_a_current_negative_test) ... ok
+test_replaced_log_bytes_do_not_supply_a_pass (test_test_evidence.TestTamperedLogEvidence.test_replaced_log_bytes_do_not_supply_a_pass) ... ok
+test_clean_control_current_unittest_pass_extraction (test_test_evidence.TestTestEvidenceCleanControl.test_clean_control_current_unittest_pass_extraction) ... ok
+test_duplicate_short_names_are_reported_as_ambiguous (test_test_evidence.TestTestIdentityCollisions.test_duplicate_short_names_are_reported_as_ambiguous) ... ok
+test_exact_qualified_name_satisfies_the_gate (test_test_evidence.TestTestIdentityCollisions.test_exact_qualified_name_satisfies_the_gate) ... ok
+test_suffix_collision_does_not_satisfy_shorter_declaration (test_test_evidence.TestTestIdentityCollisions.test_suffix_collision_does_not_satisfy_shorter_declaration) ... ok
+test_two_qualified_tests_are_both_satisfiable_exactly (test_test_evidence.TestTestIdentityCollisions.test_two_qualified_tests_are_both_satisfiable_exactly) ... ok
+
+----------------------------------------------------------------------
+Ran 33 tests in 10.813s
+
+OK
+[exit 0 | 11.1s | run ba331f6e591247ddac308c365e734252 | log .ai/logs/20261023-220146-0000-T27-task-ba331f6e591247ddac308c365e734252.log]
+
+$ python -m unittest discover -s tests -p test_completion_freshness.py -v
+test_crlf_plan_approval_binding_is_consistent (test_completion_freshness.TestApprovalBinding.test_crlf_plan_approval_binding_is_consistent) ... ok
+test_state_baseline_self_digest_tamper_is_rejected (test_completion_freshness.TestApprovalBinding.test_state_baseline_self_digest_tamper_is_rejected) ... ok
+test_baseline_replay_without_local_snapshot_cache_succeeds (test_completion_freshness.TestBaselineColdReplay.test_baseline_replay_without_local_snapshot_cache_succeeds) ... ok
+test_conflicting_cached_snapshot_is_rejected (test_completion_freshness.TestBaselineColdReplay.test_conflicting_cached_snapshot_is_rejected) ... ok
+test_clean_single_task_completion_audits_successfully (test_completion_freshness.TestCleanCompletionControls.test_clean_single_task_completion_audits_successfully) ... ok
+test_edits_after_start_are_reviewed_normally (test_completion_freshness.TestCleanCompletionControls.test_edits_after_start_are_reviewed_normally) ... ok
+test_ignored_cache_changes_do_not_invalidate_completion (test_completion_freshness.TestCleanCompletionControls.test_ignored_cache_changes_do_not_invalidate_completion) ... ok
+test_sequential_overlapping_tasks_both_audit_successfully (test_completion_freshness.TestCleanCompletionControls.test_sequential_overlapping_tasks_both_audit_successfully) ... ok
+test_clean_control_unchanged_snapshot (test_completion_freshness.TestCompletionFreshnessCleanControl.test_clean_control_unchanged_snapshot) ... ok
+test_conflicting_metadata_free_done_after_new_completion_fails (test_completion_freshness.TestLegacyAndInterruptedRecords.test_conflicting_metadata_free_done_after_new_completion_fails) ... ok
+test_corrupt_completion_record_fails_closed (test_completion_freshness.TestLegacyAndInterruptedRecords.test_corrupt_completion_record_fails_closed) ... ok
+test_genuine_legacy_epoch_completion_is_unverified (test_completion_freshness.TestLegacyAndInterruptedRecords.test_genuine_legacy_epoch_completion_is_unverified) ... ok
+test_ledger_done_without_state_completion_fails_closed (test_completion_freshness.TestLegacyAndInterruptedRecords.test_ledger_done_without_state_completion_fails_closed) ... ok
+test_legacy_ledger_chain_remains_readable (test_completion_freshness.TestLegacyAndInterruptedRecords.test_legacy_ledger_chain_remains_readable) ... ok
+test_metadata_free_start_under_baseline_approval_is_rejected (test_completion_freshness.TestLegacyAndInterruptedRecords.test_metadata_free_start_under_baseline_approval_is_rejected) ... ok
+test_old_format_start_closes_as_explicit_legacy_unverified (test_completion_freshness.TestLegacyAndInterruptedRecords.test_old_format_start_closes_as_explicit_legacy_unverified) ... ok
+test_partial_new_format_start_is_rejected (test_completion_freshness.TestLegacyAndInterruptedRecords.test_partial_new_format_start_is_rejected) ... ok
+test_state_done_without_done_ledger_record_fails_closed (test_completion_freshness.TestLegacyAndInterruptedRecords.test_state_done_without_done_ledger_record_fails_closed) ... ok
+test_legitimate_addition_deletion_and_recreation_audit (test_completion_freshness.TestLegitimateEvolution.test_legitimate_addition_deletion_and_recreation_audit) ... ok
+test_edit_during_verify_requires_a_stable_rerun (test_completion_freshness.TestMidVerificationWrites.test_edit_during_verify_requires_a_stable_rerun) ... ok
+test_approval_rechecks_active_task_after_lock_acquisition (test_completion_freshness.TestMutationLockBoundaries.test_approval_rechecks_active_task_after_lock_acquisition) ... ok
+test_duplicate_start_rechecks_task_lineage_under_lock (test_completion_freshness.TestMutationLockBoundaries.test_duplicate_start_rechecks_task_lineage_under_lock) ... ok
+test_added_and_deleted_governed_files_after_completion_fail_audit (test_completion_freshness.TestPostCompletionDrift.test_added_and_deleted_governed_files_after_completion_fail_audit) ... ok
+test_changed_config_after_completion_fails_audit (test_completion_freshness.TestPostCompletionDrift.test_changed_config_after_completion_fails_audit) ... ok
+test_changed_task_card_after_completion_fails_audit (test_completion_freshness.TestPostCompletionDrift.test_changed_task_card_after_completion_fails_audit) ... ok
+test_modified_governed_file_after_completion_fails_audit (test_completion_freshness.TestPostCompletionDrift.test_modified_governed_file_after_completion_fails_audit) ... ok
+test_editing_governed_file_before_start_is_rejected (test_completion_freshness.TestPreStartDrift.test_editing_governed_file_before_start_is_rejected) ... ok
+test_audit_check_preserves_all_bytes_on_clean_outcome (test_completion_freshness.TestReadOnlyAudit.test_audit_check_preserves_all_bytes_on_clean_outcome) ... ok
+test_audit_check_preserves_all_bytes_on_stale_outcome (test_completion_freshness.TestReadOnlyAudit.test_audit_check_preserves_all_bytes_on_stale_outcome) ... ok
+test_audit_check_reports_the_same_verdict_as_reporting_audit (test_completion_freshness.TestReadOnlyAudit.test_audit_check_reports_the_same_verdict_as_reporting_audit) ... ok
+test_repeated_reporting_audit_runs_no_commands (test_completion_freshness.TestReadOnlyAudit.test_repeated_reporting_audit_runs_no_commands) ... ok
+test_card_change_mid_attempt_is_rejected (test_completion_freshness.TestStartLineage.test_card_change_mid_attempt_is_rejected) ... ok
+test_mismatched_verified_fingerprint_is_rejected (test_completion_freshness.TestStartLineage.test_mismatched_verified_fingerprint_is_rejected) ... ok
+test_second_active_start_is_rejected (test_completion_freshness.TestStartLineage.test_second_active_start_is_rejected) ... ok
+test_task_id_reuse_under_new_approval_is_stale (test_completion_freshness.TestTaskIdReuse.test_task_id_reuse_under_new_approval_is_stale) ... ok
+
+----------------------------------------------------------------------
+Ran 36 tests in 18.139s
+
+OK
+[exit 0 | 18.5s | run 6b8111d3e0cd41dc95ff4ca4910210f5 | log .ai/logs/20261023-220205-0000-T27-task-6b8111d3e0cd41dc95ff4ca4910210f5.log]
+
+$ python -m unittest discover -s tests -p test_commit_gate.py -v
+test_staged_deletion_of_governed_file_is_rejected (test_commit_gate.TestStagedByteParity.test_staged_deletion_of_governed_file_is_rejected) ... ok
+test_staged_governance_file_with_modified_worktree_is_rejected (test_commit_gate.TestStagedByteParity.test_staged_governance_file_with_modified_worktree_is_rejected)
+.ai/ is not in the audited manifest, so it needs its own byte check. ... ok
+test_staged_governance_removal_is_rejected (test_commit_gate.TestStagedByteParity.test_staged_governance_removal_is_rejected)
+An initialized workflow must keep its governance files staged. ... ok
+test_stale_case_alias_governance_bytes_are_rejected (test_commit_gate.TestStagedByteParity.test_stale_case_alias_governance_bytes_are_rejected)
+A differently cased governance path cannot satisfy the required set ... ok
+test_stale_staged_governance_bytes_are_rejected (test_commit_gate.TestStagedByteParity.test_stale_staged_governance_bytes_are_rejected)
+Disk evidence is current but the index carries an older copy. ... ok
+test_text_auto_binary_content_is_not_normalized (test_commit_gate.TestStagedByteParity.test_text_auto_binary_content_is_not_normalized)
+text=auto does not wave through NUL/binary staged bytes. ... ok
+test_unsupported_staged_transformation_is_rejected (test_commit_gate.TestStagedByteParity.test_unsupported_staged_transformation_is_rejected)
+A per-repo attribute that rewrites bytes cannot be verified. ... ok
+test_verified_working_file_with_head_index_is_rejected (test_commit_gate.TestStagedByteParity.test_verified_working_file_with_head_index_is_rejected)
+A verified file absent from cached-change names still needs staging. ... ok
+test_clean_control_audit_check_passes (test_commit_gate.TestVerifiedWorkflowControls.test_clean_control_audit_check_passes)
+Fixture guard: T25's read-only audit accepts this project. ... ok
+test_core_autocrlf_normalization_control_passes (test_commit_gate.TestVerifiedWorkflowControls.test_core_autocrlf_normalization_control_passes)
+core.autocrlf normalization is allowed for real Git text treatment. ... ok
+test_hook_writes_no_evidence_and_runs_no_commands_on_pass (test_commit_gate.TestVerifiedWorkflowControls.test_hook_writes_no_evidence_and_runs_no_commands_on_pass) ... ok
+test_line_ending_normalization_control_passes (test_commit_gate.TestVerifiedWorkflowControls.test_line_ending_normalization_control_passes)
+Staged LF bytes for a CRLF working file are Git normalization. ... ok
+test_negative_text_override_exact_bytes_control_passes (test_commit_gate.TestVerifiedWorkflowControls.test_negative_text_override_exact_bytes_control_passes)
+-text keeps raw bytes even when core.autocrlf would normalize. ... ok
+test_path_with_spaces_clean_control_passes (test_commit_gate.TestVerifiedWorkflowControls.test_path_with_spaces_clean_control_passes) ... ok
+test_text_auto_normalization_control_passes (test_commit_gate.TestVerifiedWorkflowControls.test_text_auto_normalization_control_passes)
+text=auto with ordinary text may normalize CRLF to LF. ... ok
+test_verified_staged_workflow_passes (test_commit_gate.TestVerifiedWorkflowControls.test_verified_staged_workflow_passes) ... ok
+test_wrapper_hooks_dir_sibling_helper_passes (test_commit_gate.TestWrapperInstallation.test_wrapper_hooks_dir_sibling_helper_passes) ... ok
+test_wrapper_hooks_dir_sibling_helper_rejects_stale_bytes (test_commit_gate.TestWrapperInstallation.test_wrapper_hooks_dir_sibling_helper_rejects_stale_bytes)
+The copied-pair layout must reject stale bytes after the wrapper ... ok
+test_wrapper_integrations_layout_passes (test_commit_gate.TestWrapperInstallation.test_wrapper_integrations_layout_passes) ... ok
+test_wrapper_integrations_layout_rejects_stale_bytes (test_commit_gate.TestWrapperInstallation.test_wrapper_integrations_layout_rejects_stale_bytes)
+A real git commit must be rejected when the wrapper runs from ... ok
+test_wrapper_unsupported_layout_fails_clearly (test_commit_gate.TestWrapperInstallation.test_wrapper_unsupported_layout_fails_clearly) ... ok
+
+----------------------------------------------------------------------
+Ran 39 tests in 94.283s
+
+OK
+[exit 0 | 94.5s | run 54aa4184669a422a9aae2ce71c2d2e58 | log .ai/logs/20261023-220339-0000-T27-task-54aa4184669a422a9aae2ce71c2d2e58.log]
+
+VERIFY: PASS
+NEXT: Write .ai/reviews/T27.spec.md (template assets/spec-review.md), then: osr review T27 spec --reviewer <name>
+
+===== STDERR =====
+

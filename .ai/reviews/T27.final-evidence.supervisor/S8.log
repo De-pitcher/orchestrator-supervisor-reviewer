@@ -1,0 +1,19 @@
+test_sync_skill_excludes_use_root_relative_paths (test_sync_skill.SyncSkillTests.test_sync_skill_excludes_use_root_relative_paths) ... ok
+test_sync_skill_extra_outside_synced_items_not_flagged (test_sync_skill.SyncSkillTests.test_sync_skill_extra_outside_synced_items_not_flagged) ... ok
+test_sync_skill_file_set_included_and_excluded (test_sync_skill.SyncSkillTests.test_sync_skill_file_set_included_and_excluded) ... ok
+test_sync_skill_negative_differing_file (test_sync_skill.SyncSkillTests.test_sync_skill_negative_differing_file) ... ok
+test_sync_skill_negative_extra_file_inside_synced_item (test_sync_skill.SyncSkillTests.test_sync_skill_negative_extra_file_inside_synced_item) ... ok
+test_sync_skill_negative_missing_file (test_sync_skill.SyncSkillTests.test_sync_skill_negative_missing_file) ... ok
+test_sync_skill_prune_removes_extras_inside_synced_items_only (test_sync_skill.SyncSkillTests.test_sync_skill_prune_removes_extras_inside_synced_items_only) ... ok
+test_sync_skill_prune_with_check_is_rejected (test_sync_skill.SyncSkillTests.test_sync_skill_prune_with_check_is_rejected) ... ok
+test_sync_skill_real_repo_sync_and_check_smoke (test_sync_skill.SyncSkillTests.test_sync_skill_real_repo_sync_and_check_smoke) ... ok
+test_sync_skill_script_exists (test_sync_skill.SyncSkillTests.test_sync_skill_script_exists) ... ok
+test_sync_skill_sync_mode_requires_target (test_sync_skill.SyncSkillTests.test_sync_skill_sync_mode_requires_target) ... ok
+test_sync_skill_sync_without_prune_keeps_extras (test_sync_skill.SyncSkillTests.test_sync_skill_sync_without_prune_keeps_extras) ... ok
+test_tautological_assertion_ast (test_tautological_ast.TestTautologicalAst.test_tautological_assertion_ast) ... ok
+test_verify_zero_tests_rejected (test_zero_runner.TestZeroRunner.test_verify_zero_tests_rejected) ... ok
+
+----------------------------------------------------------------------
+Ran 14 tests in 13.760s
+
+OK

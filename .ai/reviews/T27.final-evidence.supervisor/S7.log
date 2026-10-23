@@ -1,0 +1,8 @@
+test_external_anchor_verification (test_anchor_ext.TestAnchorExt.test_external_anchor_verification) ... ok
+test_fixture_capture_and_seam_source (test_fixture_capture.TestFixtureCaptureAndSeams.test_fixture_capture_and_seam_source) ... ok
+test_honest_reporting_and_heuristics (test_honest_reporting.TestHonestReporting.test_honest_reporting_and_heuristics) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 8.019s
+
+OK

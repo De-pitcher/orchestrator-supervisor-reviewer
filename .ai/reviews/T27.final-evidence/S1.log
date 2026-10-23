@@ -1,0 +1,33 @@
+# T27 batch S1
+argv: ["C:\\Python314\\python.exe", "-m", "unittest", "-v", "test_osr.OsrTests.test_anchor_verification_detects_ledger_rollback", "test_osr.OsrTests.test_antigravity_pre_tool_hook_blocks_human_commands", "test_osr.OsrTests.test_antigravity_pre_tool_hook_blocks_out_of_scope_edits", "test_osr.OsrTests.test_antigravity_stop_hook_forces_continuation_when_tasks_pending", "test_osr.OsrTests.test_approval_secret_enforcement", "test_osr.OsrTests.test_blind_retry_is_blocked_and_triage_forces_a_change", "test_osr.OsrTests.test_card_with_fixture_and_conformance_verifies_cleanly", "test_osr.OsrTests.test_cheat_verify_true_rejected", "test_osr.OsrTests.test_config_tampering_voids_plan_approval", "test_osr.OsrTests.test_criteria_test_traceability_blocks_done_when_missing", "test_osr.OsrTests.test_fabricated_review_evidence_is_rejected", "test_osr.OsrTests.test_fixture_add_and_verify_hash_integrity"]
+cwd: C:\Users\sam\Documents\sparkz\orchestrator-supervisor-reviewer
+pythonpath: C:\Users\sam\Documents\sparkz\orchestrator-supervisor-reviewer\tests
+exit: 0
+elapsed_seconds: 34.448
+tree_digest_before: b17deff95afe64050a38b2d24c0181972d2831ab32f85cf1884d0cf5e5c696fd
+tree_digest_after: b17deff95afe64050a38b2d24c0181972d2831ab32f85cf1884d0cf5e5c696fd
+freeze_digest: b17deff95afe64050a38b2d24c0181972d2831ab32f85cf1884d0cf5e5c696fd
+scheduled_ids: 12
+observed_ids: 12
+
+===== STDOUT =====
+
+===== STDERR =====
+test_anchor_verification_detects_ledger_rollback (test_osr.OsrTests.test_anchor_verification_detects_ledger_rollback) ... ok
+test_antigravity_pre_tool_hook_blocks_human_commands (test_osr.OsrTests.test_antigravity_pre_tool_hook_blocks_human_commands) ... ok
+test_antigravity_pre_tool_hook_blocks_out_of_scope_edits (test_osr.OsrTests.test_antigravity_pre_tool_hook_blocks_out_of_scope_edits) ... ok
+test_antigravity_stop_hook_forces_continuation_when_tasks_pending (test_osr.OsrTests.test_antigravity_stop_hook_forces_continuation_when_tasks_pending) ... ok
+test_approval_secret_enforcement (test_osr.OsrTests.test_approval_secret_enforcement) ... ok
+test_blind_retry_is_blocked_and_triage_forces_a_change (test_osr.OsrTests.test_blind_retry_is_blocked_and_triage_forces_a_change) ... ok
+test_card_with_fixture_and_conformance_verifies_cleanly (test_osr.OsrTests.test_card_with_fixture_and_conformance_verifies_cleanly) ... ok
+test_cheat_verify_true_rejected (test_osr.OsrTests.test_cheat_verify_true_rejected) ... ok
+test_config_tampering_voids_plan_approval (test_osr.OsrTests.test_config_tampering_voids_plan_approval) ... ok
+test_criteria_test_traceability_blocks_done_when_missing (test_osr.OsrTests.test_criteria_test_traceability_blocks_done_when_missing) ... ok
+test_fabricated_review_evidence_is_rejected (test_osr.OsrTests.test_fabricated_review_evidence_is_rejected) ... ok
+test_fixture_add_and_verify_hash_integrity (test_osr.OsrTests.test_fixture_add_and_verify_hash_integrity) ... ok
+
+----------------------------------------------------------------------
+Ran 12 tests in 34.257s
+
+OK
+

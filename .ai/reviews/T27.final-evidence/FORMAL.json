@@ -1,0 +1,27 @@
+{
+  "id": "FORMAL",
+  "kind": "formal-osr-verify",
+  "scheduled_count": 171,
+  "argv": [
+    "C:\\Python314\\python.exe",
+    "scripts/osr.py",
+    "verify",
+    "T27"
+  ],
+  "cwd": "C:\\Users\\sam\\Documents\\sparkz\\orchestrator-supervisor-reviewer",
+  "exit": 0,
+  "elapsed_seconds": 135.181,
+  "tree_digest_before": "b17deff95afe64050a38b2d24c0181972d2831ab32f85cf1884d0cf5e5c696fd",
+  "tree_digest_after": "b17deff95afe64050a38b2d24c0181972d2831ab32f85cf1884d0cf5e5c696fd",
+  "tree_unchanged": true,
+  "run_lines": [
+    "[exit 0 | 5.8s | run 4be69617ec434328861afb80fae44fcd | log .ai/logs/20261023-220131-0000-T27-task-4be69617ec434328861afb80fae44fcd.log]",
+    "[exit 0 | 3.4s | run 0a3cd6770f9c47dbb3dff13d64b2bec9 | log .ai/logs/20261023-220135-0000-T27-task-0a3cd6770f9c47dbb3dff13d64b2bec9.log]",
+    "[exit 0 | 11.1s | run ba331f6e591247ddac308c365e734252 | log .ai/logs/20261023-220146-0000-T27-task-ba331f6e591247ddac308c365e734252.log]",
+    "[exit 0 | 18.5s | run 6b8111d3e0cd41dc95ff4ca4910210f5 | log .ai/logs/20261023-220205-0000-T27-task-6b8111d3e0cd41dc95ff4ca4910210f5.log]",
+    "[exit 0 | 94.5s | run 54aa4184669a422a9aae2ce71c2d2e58 | log .ai/logs/20261023-220339-0000-T27-task-54aa4184669a422a9aae2ce71c2d2e58.log]"
+  ],
+  "log": ".ai/reviews/T27.final-evidence/FORMAL.log",
+  "log_sha256": "623baac477eb9987b41fa9768ae903e37ddfd57b815caa111641b00b4c8ea7b2",
+  "ok": true
+}

@@ -1,0 +1,44 @@
+# T27 review-pack (artifact write)
+argv: ["C:\\Python314\\python.exe", "scripts/osr.py", "review-pack", "T27", "--out", ".ai/review-pack-T27.md"]
+exit: 0
+elapsed_seconds: 0.655
+tree_digest_before: b17deff95afe64050a38b2d24c0181972d2831ab32f85cf1884d0cf5e5c696fd
+tree_digest_after: b17deff95afe64050a38b2d24c0181972d2831ab32f85cf1884d0cf5e5c696fd
+pack_existed_before: False
+pack_bytes: 381888
+pack_sha256: 932286b5324d76bb9a5d8165ad8147bc812c2657e6c50651493ec2f1d1a7a3a4
+
+===== STDOUT (first 4000 chars) =====
+# Review Pack: T27
+
+> **Adversarial Review Directive**:
+> For every external field, find its definition in the provided source. Report any field the code uses that the source does not declare. Do not trust the builder's explanation.
+
+## Acceptance Criteria
+- **R20**: 
+  - AC: Two commands with the same label and timestamp produce distinct immutable log files; each recorded output_sha matches its own complete log, including repeated and concurrent writes. Failed commands retain output too.
+- **R21**: 
+  - AC: An exact successful confirmed command passes; another script, module, argument list, executable, shell chain, or redirection does not inherit its authorization. No confirmed commands means rejection unless explicit allow_no_commands compatibility mode is enabled.
+  - AC: Card verify, conformance, fixture-capture and quick use the same authorization rule; quick also checks ledger integrity and rejects weak/trivial commands. Changing an approved command requires confirmation and human plan/config reapproval.
+- **R22**: 
+  - AC: Old or unrelated XML files cannot satisfy current acceptance or negative-test gates. Logs used for extraction are hash-checked. Exact qualified identity matches; substring or suffix collisions cannot satisfy a different test. Ambiguous short names fail with an actionable diagnostic.
+  - AC: Names from failed commands do not count as passes. Current unittest and pytest output controls pass; missing named negative tests make verify fail, not merely warn. Quick cannot create formal task evidence.
+- **R23**: 
+  - AC: A clean completed workflow audits successfully; post-completion modification, addition or deletion of a governed file, changed card or config, reused task ID under a new approval, or missing completion manifest fails with an explicit stale-evidence reason.
+  - AC: Two sequential tasks, including a legitimate later edit of the same file, can both complete and audit successfully. Editing files before starting the second task cannot launder an unreviewed change into its baseline. An edit during verification cannot receive approval without verification of the final bytes.
+  - AC: Legacy ledger chains remain readable and unchanged; legacy completion evidence lacking freshness metadata is reported as UNVERIFIED with nonzero audit exit. audit --check performs the same checks without writing project files. A repeated unchanged audit does not rerun test commands.
+- **R24**: 
+  - AC: The Git hook rejects incomplete tasks, stale completion evidence, scope drift, broken ledger integrity, missing tooling in an initialized workflow, and staged content different from the audited working file. A fully verified staged workflow passes. Partial staging cannot commit an older unverified version while a verified version exists only on disk.
+  - AC: The check reads the index without modifying it, handles paths with spaces, and permits a repository with no OSR workflow. Hook execution does not append evidence, alter audit artifacts, run builders or invoke itself recursively.
+- **R25**: 
+  - AC: One focused regression module per defect demonstrates failing behavior before its fix and passing behavior after, with a valid clean control. Existing tests remain present and meaningful. Any incompatible fixture command change is explained and reviewed, not replaced by an exemption.
+  - AC: Sequential test batches cover every discovered test ID exactly once in the final validation inventory; all batches exit zero. Existing benchmark vectors and canaries pass once on the final unchanged tree. README and guarantees explain strict confirmation, stale legacy evidence, index checks, and the remaining trust boundary.
+
+## Task Specification
+# T27: integration evidence and accurate documentation
+id: T27
+requirements: R20, R21, R22, R23, R24, R25
+depends_on: T26
+allowed_files: tests/test_run_logs.py, tests/test_command_authorization.py, tests/test_test_evidence.py, tests/test_osr.py, tests/test_hardening_hypotheses.py, tests/test_an
+===== STDERR =====
+

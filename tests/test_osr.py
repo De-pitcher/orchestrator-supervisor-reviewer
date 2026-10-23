@@ -62,6 +62,18 @@ GOOD_TEST = (
     "        self.assertEqual(add(2, 3), 5)\n"
     "        self.assertEqual(add(-1, 1), 0)\n"
 )
+# The focused card command must be confirmed against a control for behaviour
+# that already exists, not against a pre-implemented version of the feature.
+# This bootstrap is only created when the caller has not prepared the files,
+# and the ordinary happy path replaces it after start.
+BOOT_CODE = '"""Friendly calculator."""\ndef double(x):\n    return x * 2\n'
+BOOT_TEST = (
+    "import unittest\nfrom src.calc import double\n\n"
+    "class BaselineControl(unittest.TestCase):\n"
+    "    def test_double(self):\n"
+    "        self.assertEqual(double(2), 4)\n"
+    "        self.assertEqual(double(-1), -2)\n"
+)
 SPEC_OK = 'R1: PASS @ src/calc.py:3 "return a + b"\nR2: UNVERIFIED - a human must judge the docstring tone\n\nVERDICT: PASS\n'
 QUALITY_OK = """C1: PASS - no imports in the changed file, nothing to resolve
 C2: PASS - ints only per the plan, no edge handling required
@@ -103,16 +115,36 @@ class Project:
     def setup_ready(self, approve=True):
         assert self.osr("init")[0] == 0
         cfg = json.loads(self.read(".ai/config.json"))
-        cfg["commands"] = {"test": {"cmd": '"%s" -m unittest discover -s tests -t . -q' % sys.executable, "verified": False}}
+        test_cmd = '"%s" -m unittest discover -s tests -t . -q' % sys.executable
+        card_cmd = '"%s" -m unittest tests.test_calc -q' % sys.executable
+        cfg["commands"] = {
+            "test": {"cmd": test_cmd, "verified": False},
+            "card": {"cmd": card_cmd, "verified": False},
+        }
         cfg["global_verify"] = ["test"]
         self.write(".ai/config.json", json.dumps(cfg))
+        # A meaningful passing baseline control: the exact focused card command
+        # must really run and succeed during confirmation against a demonstrable
+        # EXISTING behaviour (double), not a pre-implemented add(). Files a
+        # caller prepared before approval are respected; the ordinary happy
+        # path introduces the feature files only after start.
+        if not (self.dir / "src" / "calc.py").exists():
+            self.write("src/calc.py", BOOT_CODE)
+        if not (self.dir / "tests" / "test_calc.py").exists():
+            self.write("tests/test_calc.py", BOOT_TEST)
         code, out = self.osr("confirm-commands")
-        assert code == 0 and "CONFIRMED" in out, out
+        assert code == 0, out
+        assert "=> test: CONFIRMED" in out and "=> card: CONFIRMED" in out, out
         self.write(".ai/PLAN.md", PLAN)
         self.write(".ai/tasks/T1.md", CARD)
         if approve:
             code, out = self.osr("approve-plan", "--by", "human")
             assert code == 0, out
+
+    def reapprove(self):
+        code, out = self.osr("approve-plan", "--by", "human")
+        assert code == 0, out
+        return out
 
     def implement(self):
         self.write("src/calc.py", GOOD_CODE)
@@ -130,6 +162,18 @@ class Project:
 
 
 class OsrTests(unittest.TestCase):
+    _benchmark_cache = {}
+
+    @classmethod
+    def benchmark_report(cls, version=None):
+        """Run the adversarial benchmark once per test class per version and reuse the report (read-only)."""
+        if version not in cls._benchmark_cache:
+            from evals.eval_suite import run_adversarial_benchmark
+            cls._benchmark_cache[version] = (
+                run_adversarial_benchmark() if version is None else run_adversarial_benchmark(version=version)
+            )
+        return cls._benchmark_cache[version]
+
     def setUp(self):
         self.p = Project()
         self.addCleanup(self.p.cleanup)
@@ -137,10 +181,21 @@ class OsrTests(unittest.TestCase):
     def test_full_happy_path(self):
         p = self.p
         p.setup_ready()
+        # The bootstrap confirms the focused command against existing behaviour,
+        # so the happy path must genuinely introduce the feature files after
+        # start rather than starting from an already-implemented tree.
+        self.assertEqual(p.read("src/calc.py"), BOOT_CODE)
+        self.assertEqual(p.read("tests/test_calc.py"), BOOT_TEST)
+        self.assertNotIn("def add(", p.read("src/calc.py"))
+        self.assertNotIn("def test_add(", p.read("tests/test_calc.py"))
         self.assertEqual(p.osr("task-check", "--all")[0], 0)
         code, out = p.osr("start", "T1", "--model", "model-a")
         self.assertEqual(code, 0, out)
         p.implement()
+        self.assertIn("def add(", p.read("src/calc.py"))
+        self.assertIn("def test_add(", p.read("tests/test_calc.py"))
+        self.assertNotEqual(p.read("src/calc.py"), BOOT_CODE)
+        self.assertNotEqual(p.read("tests/test_calc.py"), BOOT_TEST)
         code, out = p.osr("verify", "T1")
         self.assertEqual(code, 0, out)
         p.write(".ai/reviews/T1.spec.md", SPEC_OK)
@@ -203,13 +258,39 @@ class OsrTests(unittest.TestCase):
 
     def test_no_tests_ran_is_failure(self):
         p = self.p
-        p.setup_ready()
-        card = CARD.replace("tests.test_calc -q", "discover -s nonexistent_dir -q")
-        p.write(".ai/tasks/T1.md", card)
-        p.osr("start", "T1", "--model", "m")
-        p.implement()
+        # Exact-selection bootstrap: the selected module must genuinely run a
+        # passing test during confirmation and at start. After start, only the
+        # allowed implementation and fixture test modules change so the same
+        # confirmed loader returns an empty suite while the test function and
+        # its assertions stay present.
+        empty_cmd = '"%s" -m unittest discover -s tests -p test_calc.py -q' % sys.executable
+        p.setup_ready(approve=False)
+        cfg = json.loads(p.read(".ai/config.json"))
+        cfg["commands"]["empty_loader"] = {"cmd": empty_cmd, "verified": False}
+        p.write(".ai/config.json", json.dumps(cfg))
+        p.write(".ai/tasks/T1.md", CARD.replace(
+            '"%s" -m unittest tests.test_calc -q' % sys.executable, empty_cmd))
+        code, out = p.osr("confirm-commands")
+        self.assertEqual(code, 0, out)
+        self.assertIn("=> empty_loader: CONFIRMED", out, out)
+        p.reapprove()
+
+        code, out = p.osr("start", "T1", "--model", "m")
+        self.assertEqual(code, 0, out)
+        p.write("src/calc.py", GOOD_CODE)
+        p.write("tests/test_calc.py", (
+            "import unittest\n"
+            "from src.calc import add\n"
+            "\n"
+            "class LoaderInvisible:\n"
+            "    def test_add(self):\n"
+            "        self.assertEqual(add(2, 3), 5)\n"
+            "        self.assertEqual(add(-1, 1), 0)\n"
+        ))
         code, out = p.osr("verify", "T1")
-        self.assertNotEqual(code, 0)
+        self.assertNotEqual(code, 0, out)
+        self.assertIn("no tests ran", out.lower(),
+                      "verify must reject because the confirmed runner genuinely executed zero tests")
 
     def test_fabricated_review_evidence_is_rejected(self):
         p = self.p
@@ -271,9 +352,15 @@ class OsrTests(unittest.TestCase):
         self.assertNotEqual(code, 0)
         self.assertIn("unchanged", out)
         p.write(".ai/tasks/T1.md", CARD.replace("## Constraints", "## Example\nadd(2, 3) == 5\n\n## Constraints"))
+        # The failed attempt deliberately left a wrong implementation in the
+        # governed tree. A retry starts from the accepted baseline, so the
+        # temporary worktree is restored to the baseline bytes before the new
+        # attempt is started; the retry then implements the fix post-start.
+        p.write("src/calc.py", BOOT_CODE)
+        p.write("tests/test_calc.py", BOOT_TEST)
         code, out = p.osr("start", "T1", "--model", "m")
         self.assertEqual(code, 0, out)
-        p.write("src/calc.py", GOOD_CODE)
+        p.implement()
         self.assertEqual(p.osr("verify", "T1")[0], 0)
 
     def test_spec_triage_blocks_until_human_unblocks(self):
@@ -312,6 +399,10 @@ class OsrTests(unittest.TestCase):
         p.write("src/calc.py", GOOD_CODE)
         p.write("tests/test_calc.py", GOOD_TEST)
         p.write(".ai/tasks/T1.md", CARD.replace("allowed_files: src/calc.py, tests/test_calc.py", "allowed_files: src/**, tests/**, package.json"))
+        # The card and the baseline files are governed inputs, so the fixture
+        # binds their current bytes with a fresh temporary approval before the
+        # start that must record the red baseline.
+        p.reapprove()
         self.assertEqual(p.osr("start", "T1", "--model", "m")[0], 0)
         p.write("tests/test_calc.py", GOOD_TEST.replace("        self.assertEqual(add(-1, 1), 0)\n", ""))
         p.write("package.json", json.dumps({"dependencies": {"react": "18"}}))
@@ -346,8 +437,10 @@ class OsrTests(unittest.TestCase):
         self.assertIn("action", data)
         self.assertEqual(data["action"], "osr start T1 --model <your-model-name>")
 
-        # Test gate rejection with --json: verify before implementing returns exit code 2
+        # Test gate rejection with --json: verify with no working
+        # implementation (the baseline is a passing control) returns exit code 2
         p.osr("start", "T1", "--model", "m")
+        p.write("src/calc.py", "def add(a, b):\n    return None\n")
         code, out = p.osr("verify", "T1", "--json")
         self.assertEqual(code, 2, "Gate failure should return exit code 2")
         data = json.loads(out)
@@ -521,8 +614,26 @@ class OsrTests(unittest.TestCase):
         p.setup_ready()
         pre_commit_script = ROOT_DIR / "integrations" / "git" / "pre_commit.py"
         self.assertTrue(pre_commit_script.exists())
+        # A commit is only allowed on the complete accepted artifact: finish the
+        # task, record the manual signoff, require a clean audit, then stage the
+        # whole artifact before invoking the real hook.
+        p.osr("start", "T1", "--model", "m")
+        p.implement()
+        code, out = p.osr("verify", "T1")
+        self.assertEqual(code, 0, out)
+        p.write(".ai/reviews/T1.spec.md", SPEC_OK)
+        self.assertEqual(p.osr("review", "T1", "spec", "--reviewer", "peer")[0], 0)
+        p.write(".ai/reviews/T1.quality.md", QUALITY_OK)
+        self.assertEqual(p.osr("review", "T1", "quality", "--reviewer", "peer")[0], 0)
+        code, out = p.osr("done", "T1")
+        self.assertEqual(code, 0, out)
+        code, out = p.osr("signoff", "R2", "--by", "human", "--note", "docstring tone reviewed")
+        self.assertEqual(code, 0, out)
+        code, out = p.osr("audit", "--check")
+        self.assertEqual(code, 0, out)
+        p.git_init()
         res = subprocess.run([sys.executable, str(pre_commit_script)], capture_output=True, text=True, cwd=str(p.dir))
-        self.assertEqual(res.returncode, 0)
+        self.assertEqual(res.returncode, 0, res.stderr + res.stdout)
 
         p.write(".ai/ledger.jsonl", "corrupted json line\n")
         res = subprocess.run([sys.executable, str(pre_commit_script)], capture_output=True, text=True, cwd=str(p.dir))
@@ -586,19 +697,18 @@ class OsrTests(unittest.TestCase):
         self.assertIn("custom_violation", out)
 
     def test_adversarial_eval_suite_benchmarks_catch_rate(self):
-        # Must import and run evals.eval_suite benchmark
-        from evals.eval_suite import run_adversarial_benchmark
-        report = run_adversarial_benchmark()
+        # Run the adversarial benchmark (cached per class) and require every vector V1-V12 CAUGHT
+        report = self.benchmark_report()
         self.assertIn("catch_rate", report)
         self.assertEqual(report["catch_rate"], 1.0)
         self.assertEqual(report["false_positive_rate"], 0.0)
         self.assertGreaterEqual(report["total_cheats_tested"], 12)
-        self.assertEqual(len(report["caught_vectors"]), 10)
-        self.assertEqual(len(report["known_misses"]), 2)
+        caught_ids = {v["id"] for v in report["caught_vectors"]}
+        for required_id in ["V1", "V2", "V3", "V4", "V5", "V6", "V7", "V8", "V9", "V10", "V11", "V12"]:
+            self.assertIn(required_id, caught_ids)
+        self.assertEqual(report["known_misses"], [])
         self.assertIn("V9", [v["id"] for v in report["caught_vectors"]])
         self.assertIn("V10", [v["id"] for v in report["caught_vectors"]])
-        miss_ids = [m["id"] for m in report["known_misses"]]
-        self.assertEqual(miss_ids, ["V11", "V12"])
 
     def test_seams_plan_check_warning_when_seams_table_missing(self):
         p = Project()
@@ -660,6 +770,20 @@ None.
         p = Project()
         try:
             p.osr("init")
+            # Exact command fixtures: the cards below verify with
+            # ``discover -s tests -q``, so that exact string must be confirmed
+            # (the global discover variant stays available for other runs).
+            cfg = json.loads(p.read(".ai/config.json"))
+            cfg["commands"] = {
+                "test": {"cmd": f'"{sys.executable}" -m unittest discover -s tests -t . -q', "verified": False},
+                "card": {"cmd": f'"{sys.executable}" -m unittest discover -s tests -q', "verified": False},
+            }
+            cfg["global_verify"] = ["test"]
+            p.write(".ai/config.json", json.dumps(cfg))
+            code, out = p.osr("confirm-commands")
+            self.assertEqual(code, 0, out)
+            self.assertIn("=> card: CONFIRMED", out, out)
+
             plan_text = """# Plan: Service Integration
 ## Goal
 Integrate external user service.
@@ -1451,10 +1575,15 @@ Done.
         try:
             p.osr("init")
             cfg = json.loads(p.read(".ai/config.json"))
-            cfg["commands"] = {"test": {"cmd": f'"{sys.executable}" -m unittest discover -s tests -t . -q', "verified": False}}
+            cfg["commands"] = {
+                "test": {"cmd": f'"{sys.executable}" -m unittest discover -s tests -t . -q', "verified": False},
+                "card": {"cmd": f'"{sys.executable}" -m unittest discover -s tests -t . -v', "verified": False},
+            }
             cfg["global_verify"] = ["test"]
             p.write(".ai/config.json", json.dumps(cfg))
-            p.osr("confirm-commands")
+            code, out = p.osr("confirm-commands")
+            self.assertEqual(code, 0, out)
+            self.assertIn("=> card: CONFIRMED", out, out)
 
             plan_text = """# Plan
 ## Goal
@@ -1538,10 +1667,10 @@ VERDICT: PASS
 
     def test_phase6_benchmark_and_honest_reporting(self):
         from evals import eval_suite
-        report = eval_suite.run_adversarial_benchmark()
-        self.assertEqual(report["version"], "0.3.0")
+        report = self.benchmark_report()
+        import scripts.osr as osr_module
+        self.assertEqual(report["version"], osr_module.VERSION)
         self.assertGreaterEqual(len(report["caught_vectors"]), 10)
-        self.assertGreaterEqual(len(report["known_misses"]), 2)
         # Multi-fixture clean run measurement: at least 10 clean projects tested
         self.assertGreaterEqual(report["clean_runs_tested"], 10)
         self.assertEqual(report["false_positives"], 0)
@@ -1550,29 +1679,39 @@ VERDICT: PASS
         caught_ids = {v["id"] for v in report["caught_vectors"]}
         self.assertIn("V9", caught_ids)
         self.assertIn("V10", caught_ids)
-        # Vectors V11 and V12 must be in known_misses
-        miss_ids = {v["id"] for v in report["known_misses"]}
-        self.assertIn("V11", miss_ids)
-        self.assertIn("V12", miss_ids)
+        # Vectors V11 and V12 are caught as of v0.3.1
+        self.assertIn("V11", caught_ids)
+        self.assertIn("V12", caught_ids)
+        self.assertEqual(report["known_misses"], [])
 
     def test_phase6_version_and_docs_integrity(self):
         import scripts.osr as osr_module
         # Core CLI version bump
-        self.assertEqual(osr_module.VERSION, "0.3.0")
+        import re
+        from evals import eval_suite
+        current_version = osr_module.VERSION
+        self.assertTrue(bool(re.match(r"^\d+\.\d+\.\d+$", current_version)))
         
         # pyproject.toml version
         pyproject = (ROOT_DIR / "pyproject.toml").read_text(encoding="utf-8")
-        self.assertIn('version = "0.3.0"', pyproject)
+        pyproject_ver_m = re.search(r'^version\s*=\s*["\']([^"\']+)["\']', pyproject, re.MULTILINE)
+        self.assertIsNotNone(pyproject_ver_m, "pyproject.toml must declare version")
+        pyproject_ver = pyproject_ver_m.group(1)
+        self.assertEqual(current_version, pyproject_ver)
+        eval_report = self.benchmark_report()
+        self.assertEqual(current_version, eval_report["version"])
 
-        # CHANGELOG.md exists and documents 0.3.0
+        # CHANGELOG.md exists and its top entry matches the current version
         changelog_path = ROOT_DIR / "CHANGELOG.md"
         self.assertTrue(changelog_path.exists(), "CHANGELOG.md must exist")
         changelog = changelog_path.read_text(encoding="utf-8")
-        self.assertIn("## [0.3.0]", changelog)
+        top_changelog_m = re.search(r"##\s*\[?v?(\d+\.\d+\.\d+)\]?", changelog)
+        self.assertIsNotNone(top_changelog_m, "CHANGELOG.md must have a top version entry")
+        self.assertEqual(current_version, top_changelog_m.group(1))
 
         # README.md updates
         readme = (ROOT_DIR / "README.md").read_text(encoding="utf-8")
-        self.assertIn("0.3.0", readme)
+        self.assertIn(current_version, readme)
         self.assertIn("## Seams", readme)
         self.assertIn("## Fixtures", readme)
         self.assertIn("Enforcement setup", readme)

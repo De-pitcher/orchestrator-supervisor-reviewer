@@ -43,10 +43,26 @@ class TestProject:
         cfg = json.loads(self.read(".ai/config.json"))
         cfg["commands"] = {
             "test": {"cmd": f'"{py}" -m unittest discover -s tests -t . -q', "verified": False},
+            "card": {"cmd": f'"{py}" -m unittest tests.test_calc -v', "verified": False},
         }
         cfg["global_verify"] = ["test"]
         self.write(".ai/config.json", json.dumps(cfg))
-        self.osr("confirm-commands")
+        # The exact card verify command must really run a passing baseline
+        # during confirmation; the cheat scenarios still change these bytes
+        # only after start.
+        self.write("src/calc.py", "def add(a, b):\n    return a + b\n")
+        self.write("tests/test_calc.py", (
+            "import unittest\n"
+            "from src.calc import add\n"
+            "class T(unittest.TestCase):\n"
+            "    def test_add(self):\n"
+            "        self.assertEqual(add(2, 3), 5)\n"
+            "        self.assertEqual(add(-1, 1), 0)\n"
+            "        self.assertEqual(add(0, 0), 0)\n"
+        ))
+        code, out = self.osr("confirm-commands")
+        assert code == 0, out
+        assert "=> card: CONFIRMED" in out, out
         self.write(".ai/PLAN.md", plan_text)
         self.write(".ai/tasks/T1.md", card_text)
         self.osr("approve-plan", "--by", "human")
@@ -93,7 +109,8 @@ None.
 Done.
 """
         p.setup_ready(plan, card)
-        p.osr("start", "T1")
+        code, out = p.osr("start", "T1")
+        self.assertEqual(code, 0, out)
 
         # Case 1: Python constant assertion: assert 1 == 1 and assert True
         p.write("src/calc.py", "def add(a, b): return 'wrong'\n")

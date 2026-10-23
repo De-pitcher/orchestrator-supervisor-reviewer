@@ -1,0 +1,24 @@
+test_confirm_ledger_records_run_identity (test_run_logs.TestLedgerWiring.test_confirm_ledger_records_run_identity) ... ok
+test_start_ledger_baseline_records_run_identity (test_run_logs.TestLedgerWiring.test_start_ledger_baseline_records_run_identity) ... ok
+test_verify_ledger_records_run_identity_and_rereads_each_log (test_run_logs.TestLedgerWiring.test_verify_ledger_records_run_identity_and_rereads_each_log) ... ok
+test_clean_control_retained_log_digest (test_run_logs.TestRunLogsCleanControl.test_clean_control_retained_log_digest) ... ok
+test_crlf_payload_is_not_double_translated (test_run_logs.TestRunLogsCommandOutput.test_crlf_payload_is_not_double_translated) ... ok
+test_downstream_reread_of_each_command_log_is_independent (test_run_logs.TestRunLogsCommandOutput.test_downstream_reread_of_each_command_log_is_independent) ... ok
+test_failed_command_retains_stdout_stderr_and_digest (test_run_logs.TestRunLogsCommandOutput.test_failed_command_retains_stdout_stderr_and_digest) ... ok
+test_recorded_metadata_is_complete_and_ledger_serializable (test_run_logs.TestRunLogsCommandOutput.test_recorded_metadata_is_complete_and_ledger_serializable) ... ok
+test_successful_command_lf_payload_exact_bytes (test_run_logs.TestRunLogsCommandOutput.test_successful_command_lf_payload_exact_bytes) ... ok
+test_timeout_output_is_retained (test_run_logs.TestRunLogsCommandOutput.test_timeout_output_is_retained) ... ok
+test_two_same_label_recorded_commands_keep_own_digest (test_run_logs.TestRunLogsCommandOutput.test_two_same_label_recorded_commands_keep_own_digest) ... ok
+test_unicode_payload_exact_bytes (test_run_logs.TestRunLogsCommandOutput.test_unicode_payload_exact_bytes) ... ok
+test_concurrent_same_label_writers_retain_every_payload (test_run_logs.TestRunLogsImmutability.test_concurrent_same_label_writers_retain_every_payload) ... ok
+test_exhausted_retries_fail_and_preserve_existing_bytes (test_run_logs.TestRunLogsImmutability.test_exhausted_retries_fail_and_preserve_existing_bytes) ... ok
+test_frozen_clock_same_label_writes_keep_both_outputs (test_run_logs.TestRunLogsImmutability.test_frozen_clock_same_label_writes_keep_both_outputs) ... ok
+test_repeated_candidate_is_retried_not_overwritten (test_run_logs.TestRunLogsImmutability.test_repeated_candidate_is_retried_not_overwritten) ... ok
+test_run_ids_are_nonempty_and_unique (test_run_logs.TestRunLogsImmutability.test_run_ids_are_nonempty_and_unique) ... ok
+test_same_label_rapid_writes_keep_both_outputs (test_run_logs.TestRunLogsImmutability.test_same_label_rapid_writes_keep_both_outputs) ... ok
+test_sequence_hint_separates_same_label_writes (test_run_logs.TestRunLogsImmutability.test_sequence_hint_separates_same_label_writes) ... ok
+
+----------------------------------------------------------------------
+Ran 19 tests in 5.640s
+
+OK

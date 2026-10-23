@@ -37,15 +37,20 @@ class TestProject:
         r = subprocess.run([sys.executable, OSR, "--root", str(self.dir)] + list(args), capture_output=True, text=True)
         return r.returncode, r.stdout + r.stderr
 
-    def setup_ready(self, plan_text, card_text):
+    def setup_ready(self, plan_text, card_text, baseline=None, extra_commands=None):
         self.osr("init")
         py = sys.executable
         cfg = json.loads(self.read(".ai/config.json"))
-        cfg["commands"] = {
+        commands = {
             "test": {"cmd": f'"{py}" -m unittest discover -s tests -t . -q', "verified": False},
         }
+        for name, cmd in (extra_commands or {}).items():
+            commands[name] = {"cmd": cmd, "verified": False}
+        cfg["commands"] = commands
         cfg["global_verify"] = ["test"]
         self.write(".ai/config.json", json.dumps(cfg))
+        for rel, text in (baseline or {}).items():
+            self.write(rel, text)
         self.osr("confirm-commands")
         self.write(".ai/PLAN.md", plan_text)
         self.write(".ai/tasks/T1.md", card_text)
@@ -77,8 +82,11 @@ None.
 ## Open questions
 """
 
-        # Part 1: Verify command that executes 0 tests (e.g. pattern matches nothing)
-        zero_verify_cmd = f'"{py}" -m unittest discover -s tests -p "test_non_existent_*.py" -v'
+        # Part 1: Verify command that executes 0 tests after start. The same
+        # focused loader genuinely runs one real test during confirmation and
+        # start; only the post-start fixture module becomes invisible to the
+        # loader, while the test function and its assertions remain present.
+        zero_verify_cmd = f'"{py}" -m unittest discover -s tests -p test_calc.py -v'
         card_zero_tests = f"""# T1: Add
 id: T1
 requirements: R1
@@ -95,10 +103,24 @@ None.
 ## Definition of done
 Done.
 """
-        p.setup_ready(plan, card_zero_tests)
-        p.osr("start", "T1")
+        p.setup_ready(
+            plan,
+            card_zero_tests,
+            baseline={
+                "src/calc.py": "def add(a, b): return a + b\n",
+                "tests/test_calc.py": (
+                    "import unittest\n"
+                    "from src.calc import add\n"
+                    "class T(unittest.TestCase):\n"
+                    "    def test_add(self): self.assertEqual(add(2, 3), 5)\n"
+                ),
+            },
+            extra_commands={"focused": zero_verify_cmd},
+        )
+        code, out = p.osr("start", "T1")
+        self.assertEqual(code, 0, out)
         p.write("src/calc.py", "def add(a, b): return a + b\n")
-        p.write("tests/test_calc.py", "import unittest\nclass T(unittest.TestCase):\n    def test_add(self): self.assertEqual(len('abc'), 3)\n")
+        p.write("tests/test_calc.py", "import unittest\nfrom src.calc import add\nclass LoaderInvisible:\n    def test_add(self): self.assertEqual(add(2, 3), 5)\n")
         code, out = p.osr("verify", "T1")
         self.assertNotEqual(code, 0, f"verify must fail when runner executes 0 tests: {out}")
         self.assertIn("no tests ran", out.lower())

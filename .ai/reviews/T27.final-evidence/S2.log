@@ -1,0 +1,33 @@
+# T27 batch S2
+argv: ["C:\\Python314\\python.exe", "-m", "unittest", "-v", "test_osr.OsrTests.test_full_happy_path", "test_osr.OsrTests.test_git_pre_commit_hook", "test_osr.OsrTests.test_js_references_and_weakened_tests_are_flagged", "test_osr.OsrTests.test_json_output_and_exit_codes", "test_osr.OsrTests.test_kind_realtime_requires_realtime_appendix_in_quality_review", "test_osr.OsrTests.test_ledger_locking_concurrency", "test_osr.OsrTests.test_ledger_tampering_is_detected", "test_osr.OsrTests.test_manual_check_requirement_shows_unverified_until_signoff_audit_exit_2", "test_osr.OsrTests.test_manual_requirement_cannot_pass", "test_osr.OsrTests.test_negative_tests_enforced_per_seam_and_verified_in_test_output", "test_osr.OsrTests.test_next_walks_the_workflow", "test_osr.OsrTests.test_no_tests_ran_is_failure"]
+cwd: C:\Users\sam\Documents\sparkz\orchestrator-supervisor-reviewer
+pythonpath: C:\Users\sam\Documents\sparkz\orchestrator-supervisor-reviewer\tests
+exit: 0
+elapsed_seconds: 49.349
+tree_digest_before: b17deff95afe64050a38b2d24c0181972d2831ab32f85cf1884d0cf5e5c696fd
+tree_digest_after: b17deff95afe64050a38b2d24c0181972d2831ab32f85cf1884d0cf5e5c696fd
+freeze_digest: b17deff95afe64050a38b2d24c0181972d2831ab32f85cf1884d0cf5e5c696fd
+scheduled_ids: 12
+observed_ids: 12
+
+===== STDOUT =====
+
+===== STDERR =====
+test_full_happy_path (test_osr.OsrTests.test_full_happy_path) ... ok
+test_git_pre_commit_hook (test_osr.OsrTests.test_git_pre_commit_hook) ... ok
+test_js_references_and_weakened_tests_are_flagged (test_osr.OsrTests.test_js_references_and_weakened_tests_are_flagged) ... ok
+test_json_output_and_exit_codes (test_osr.OsrTests.test_json_output_and_exit_codes) ... ok
+test_kind_realtime_requires_realtime_appendix_in_quality_review (test_osr.OsrTests.test_kind_realtime_requires_realtime_appendix_in_quality_review) ... ok
+test_ledger_locking_concurrency (test_osr.OsrTests.test_ledger_locking_concurrency) ... ok
+test_ledger_tampering_is_detected (test_osr.OsrTests.test_ledger_tampering_is_detected) ... ok
+test_manual_check_requirement_shows_unverified_until_signoff_audit_exit_2 (test_osr.OsrTests.test_manual_check_requirement_shows_unverified_until_signoff_audit_exit_2) ... ok
+test_manual_requirement_cannot_pass (test_osr.OsrTests.test_manual_requirement_cannot_pass) ... ok
+test_negative_tests_enforced_per_seam_and_verified_in_test_output (test_osr.OsrTests.test_negative_tests_enforced_per_seam_and_verified_in_test_output) ... ok
+test_next_walks_the_workflow (test_osr.OsrTests.test_next_walks_the_workflow) ... ok
+test_no_tests_ran_is_failure (test_osr.OsrTests.test_no_tests_ran_is_failure) ... ok
+
+----------------------------------------------------------------------
+Ran 12 tests in 49.143s
+
+OK
+

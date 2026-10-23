@@ -1,0 +1,30 @@
+{
+  "argv": [
+    "C:\\Python314\\python.exe",
+    "-m",
+    "unittest",
+    "-v",
+    "test_stop_hook.TestStopHookContract.test_stop_hook_contract",
+    "test_stop_hook.TestStopHookContract.test_stop_hook_when_no_active_workflow"
+  ],
+  "cwd": "C:\\Users\\sam\\Documents\\sparkz\\orchestrator-supervisor-reviewer",
+  "elapsed_seconds": 1.113,
+  "exit": 0,
+  "id": "S6",
+  "kind": "supplementary-ids",
+  "log": ".ai/reviews/T27.final-evidence.corrected/S6.log",
+  "log_sha256": "90415dbac7df30930d86df4f655d105403a7def71190eed0d2ece2770ce35e8a",
+  "missing_ids": [],
+  "observed_count": 2,
+  "observed_ids": [
+    "test_stop_hook.TestStopHookContract.test_stop_hook_contract",
+    "test_stop_hook.TestStopHookContract.test_stop_hook_when_no_active_workflow"
+  ],
+  "ok": true,
+  "pythonpath": "C:\\Users\\sam\\Documents\\sparkz\\orchestrator-supervisor-reviewer\\tests",
+  "scheduled_count": 2,
+  "tree_digest_after": "fb0f2d19eb7a76a54aa0296ca923d9465f17aaca4a162116edc476a62f2c0fd4",
+  "tree_digest_before": "fb0f2d19eb7a76a54aa0296ca923d9465f17aaca4a162116edc476a62f2c0fd4",
+  "tree_unchanged": true,
+  "unexpected_ids": []
+}

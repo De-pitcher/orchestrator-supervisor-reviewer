@@ -1,0 +1,14 @@
+{
+  "ok": true,
+  "ids": 249,
+  "unique_ids": 249,
+  "loader_inventory_matches": true,
+  "freeze_digest": "fb0f2d19eb7a76a54aa0296ca923d9465f17aaca4a162116edc476a62f2c0fd4",
+  "all_log_hashes_match": true,
+  "formal_verify_seq": 319,
+  "benchmark": {
+    "caught": 12,
+    "canaries": 11,
+    "false_positives": 0
+  }
+}

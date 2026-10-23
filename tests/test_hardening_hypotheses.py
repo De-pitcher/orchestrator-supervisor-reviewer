@@ -47,10 +47,16 @@ class TestProject:
         self.osr("init")
         cfg = json.loads(self.read(".ai/config.json"))
         test_cmd = f'"{sys.executable}" -m unittest discover -s tests -t . -q'
-        cfg["commands"] = {"test": {"cmd": test_cmd, "verified": False}}
+        card_cmd = f'"{sys.executable}" -m unittest discover -s tests -t . -v'
+        cfg["commands"] = {
+            "test": {"cmd": test_cmd, "verified": False},
+            "card": {"cmd": card_cmd, "verified": False},
+        }
         cfg["global_verify"] = ["test"]
         self.write(".ai/config.json", json.dumps(cfg))
-        self.osr("confirm-commands")
+        code, out = self.osr("confirm-commands")
+        assert code == 0, out
+        assert "=> card: CONFIRMED" in out, out
         self.write(".ai/PLAN.md", plan_text)
         self.write(".ai/tasks/T1.md", card_text)
         self.osr("approve-plan", "--by", "human")
@@ -379,11 +385,13 @@ None.
 ## Definition of done
 Done.
 """
-            p.setup_project(plan, card)
-            # Baseline with 1 real assertion
+            # Baseline with 1 real assertion, deliberately supplied before
+            # approval so setup preserves it and start begins from accepted bytes.
             p.write("src/calc.py", "def add(a, b): return a + b\n")
             p.write("tests/test_calc.py", "import unittest\nfrom src.calc import add\nclass T(unittest.TestCase):\n    def test_add(self): self.assertEqual(add(2, 3), 5)\n")
-            p.osr("start", "T1")
+            p.setup_project(plan, card)
+            code, out = p.osr("start", "T1")
+            self.assertEqual(code, 0, out)
             
             # Cheat: break code, replace assertion with assert 1 == 1 (assertion count remains 1)
             p.write("src/calc.py", "def add(a, b): return 'broken'\n")
