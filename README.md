@@ -217,7 +217,9 @@ Run the suite anytime: `python -m evals.eval_suite`.
 
 ## Status
 
-Current development tree (unreleased, package version 0.3.1). The test tree discovers 249 tests across 14 modules, including the 12-vector adversarial benchmark and multi-fixture clean canaries. Development checks in this working tree were executed on Windows with Python 3.14; native Linux/macOS, other Python versions and remote CI remain UNVERIFIED until actually run. Features Antigravity tool-call hooks (configured harness paths only, not an OS permission boundary), git pre-commit hooks, external ledger anchoring, pluggable language checkers, and quick path verification. Reference checking is built in for Python and JS/TS, and extensible to any language via `.ai/config.json` checkers. See [`CONTRIBUTING.md`](CONTRIBUTING.md).
+Current development tree (unreleased, package version 0.3.1): **251 tests across 14 modules**, including the adversarial benchmark and clean canaries. The CI portability fixes in `58a16e6` passed the configured **Ubuntu/macOS/Windows × Python 3.8–3.12** matrix: [15 push jobs](https://github.com/De-pitcher/orchestrator-supervisor-reviewer/actions/runs/40043049298) and [15 PR jobs](https://github.com/De-pitcher/orchestrator-supervisor-reviewer/actions/runs/40043053441), with no failures or skipped jobs. Local validation also used Windows/Python 3.14.3; Python 3.13 is outside that recorded evidence. These are results for the cited commit, not a promise about future changes or identical raw-byte baselines across checkouts.
+
+The workflow includes exact confirmed commands, immutable current-run logs, canonical named-test evidence, completion freshness and read-only staged-artifact checks. Antigravity hooks cover configured tool-call paths only; they are not an OS permission boundary. Reference checking is built in for Python and JS/TS and extensible via configured checkers. Multiline named-test parsing and the actor-authentication redesign remain deferred. See [`CHANGELOG.md`](CHANGELOG.md), [`references/guarantees.md`](references/guarantees.md) and [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## License
 

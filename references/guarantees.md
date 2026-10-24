@@ -7,6 +7,7 @@ Be honest with the human about this. Overclaiming is the fastest way to lose the
 - What is mechanical
 - Approval freshness and legacy migration
 - Staged-content checks
+- Recorded validation
 - What is not
 - Residual risks and how to reduce them
 
@@ -46,6 +47,12 @@ Approval epochs recorded before baselines existed are **legacy**. Their closures
 ### Staged-content checks
 
 The git pre-commit helper is read-only. It asks the CLI for `audit --check`, then uses Git plumbing to compare every proposed index entry with the audited working tree. This covers the complete **governed** index required by the current governance and the configured ignore policy, not every file that happens to exist in the workspace. Equal bytes pass for a supported regular-file entry, including `-text`/`binary` paths. This is not an unconditional byte-equality guarantee: a difference confined to CRLF/LF is accepted only when Git's effective attributes say the path is stored as text, while differing `-text`/`binary` bytes are rejected without newline normalization. Unsupported clean filters, `working-tree-encoding`, `ident`, merge stages and non-regular modes are rejected with a diagnostic even when their bytes happen to be equal. Passing this hook is local evidence for one checkout; it is not proof that another platform or checkout stores the same bytes.
+
+## Recorded validation
+
+For commit `58a16e6`, the configured Ubuntu/macOS/Windows × Python 3.8–3.12 matrix completed successfully in both the [15-job push run](https://github.com/De-pitcher/orchestrator-supervisor-reviewer/actions/runs/40043049298) and [15-job PR run](https://github.com/De-pitcher/orchestrator-supervisor-reviewer/actions/runs/40043053441), with no skipped matrix jobs. Current discovery is 251 tests. The original 249-test integration record predates the two CI portability regressions and remains historical evidence.
+
+These runs execute tests, ledger verification and plan validation. They are not a final audit of every downstream project, proof that an external harness enforces hooks, or proof of identical raw approval baselines across checkouts. Local Windows/Python 3.14.3 checks are separate; Python 3.13 is not covered by these recorded runs. Successful tests do not remove the limitations below.
 
 ## What is not
 

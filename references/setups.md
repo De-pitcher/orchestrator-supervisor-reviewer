@@ -43,24 +43,26 @@ The project root is the current directory, or pass `--root <path>` before the co
 
 ## Continuous integration & Anchoring
 
-The ledger, plan, and anchor make solid CI gates. A minimal job:
+The shipped `.github/workflows/test.yml` checks full test discovery, ledger integrity and plan syntax on Ubuntu/macOS/Windows with Python 3.8–3.12. It does not run a final acceptance audit or compare a trusted external anchor. For a project's acceptance gate, configure those separately. For example, on a Linux CI runner with a supervisor-controlled anchor mounted read-only:
 
 ```yaml
-- run: python path/to/scripts/osr.py ledger-verify --anchor .osr-anchor
-- run: python path/to/scripts/osr.py audit
+- run: python path/to/scripts/osr.py ledger-verify --anchor /mnt/supervisor/osr-anchor
+- run: python path/to/scripts/osr.py audit --check --anchor /mnt/supervisor/osr-anchor
 ```
 
-`ledger-verify` fails if the ledger was edited, rolled back, or truncated. `osr anchor` commits the current ledger sequence and hash externally to prevent rollback attacks. `audit` fails (exit 1) if requirements are uncovered or tasks are unfinished, and exits 2 when only human sign-offs are pending; decide in CI whether 2 should block.
+`ledger-verify` checks the hash chain; detecting rollback requires comparison with a trusted anchor outside the builder's write access. `osr anchor --out <external-path>` writes a pin for the current ledger sequence and hash. A pin protects that prefix only while independently compared: it does not validate later entries, actor identity, tests or mutable tooling. `audit --check` evaluates accepted content without writing project files or rerunning verification commands. Audit exits nonzero for failures or UNVERIFIED evidence, including legacy epochs without baseline metadata; code 2 can also indicate pending human sign-off. Do not treat every nonzero result as a request for sign-off.
 
 ## Harness enforcement & Antigravity hooks
 
-To prevent agents from bypassing human authority or widening scope:
-- **Antigravity Hooks (`integrations/antigravity/hooks.json`)**: Configures `PreToolUse` hooks (`pre_tool.py`) that read active task cards and hard-deny any file modifications outside `allowed_files`. Also intercepts and denies attempts by the agent to run human-only commands (`approve-plan`, `unblock`, `signoff`, `reset`) or read approval secret files.
-- **Completion Gate (`stop_hook.py`)**: Checks `osr next` before allowing an agent session to terminate, preventing premature completion when tasks remain undone.
-- **Git Pre-Commit Hook (`integrations/git/pre_commit.py`)**: Validates ledger integrity and ensures all active changes comply with plan approval before any `git commit` succeeds.
-- **Approval Secrets (`OSR_APPROVAL_SECRET`)**: Configure an environment secret or external token file. Human commands require `--secret <token>`, preventing unauthorized self-approval.
+These controls apply within configured execution paths; they are not an OS permission boundary:
+- **Antigravity Hooks (`integrations/antigravity/hooks.json`)**: `pre_tool.py` checks the tool-call shapes it recognizes, denying writes outside the active card and the listed commands (`approve-plan`, `unblock`, `signoff`, `reset`). Direct CLI execution outside that harness bypasses these interceptions; `waive` is not in that command list.
+- **Completion Gate (`stop_hook.py`)**: Inspects task state and, when it considers the workflow incomplete, returns continuation instructions with the next action. It does not provide an independent acceptance audit or guarantee the harness enforces its response.
+- **Git Pre-Commit Hook (`integrations/git/pre_commit.py`)**: If installed and invoked, requires read-only `audit --check` and compares the complete governed index with the audited working artifact, including required governance evidence. It never stages or reruns tests. Install the executable wrapper using [the integration guide](../integrations/README.md); `--no-verify` bypasses it.
+- **Approval Secrets (`OSR_APPROVAL_SECRET`)**: Optional configured secrets require possession of the secret for protected commands; `--by`, model and reviewer names remain self-reported labels. Keep actual secrets outside the repository. This is not human-actor authentication.
 
 ## Team habits
 
-- Commit `.ai/PLAN.md`, `tasks/`, `reviews/`, `ledger.jsonl`, `config.json`, `state.json`, and `.osr-anchor`. `.ai/.gitignore` already excludes logs and snapshots.
+- Commit `.ai/PLAN.md`, current `tasks/` and `reviews/`, `ledger.jsonl`, `config.json` and `state.json`. Retain selected raw logs when needed for reproducible evidence, preserving their hashed bytes. Logs and snapshot caches are normally ignored; baseline-backed replay can work without the cache, but conflicting caches are rejected.
+- Store the trusted anchor outside the builder's write access. An in-repository `.osr-anchor` may be a convenience copy, but is not independent rollback protection.
+- Confirm exact command strings before approval; a different argument, quote or internal whitespace needs its own confirmation. Changed plan/configuration requires fresh human approval, and only one task may be active. Legacy completion history without current baseline bindings does not earn current requirement credit.
 - On a team repository, treat `PLAN.md` approval like merging a design doc.

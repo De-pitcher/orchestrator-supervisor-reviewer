@@ -544,6 +544,121 @@
         "result_sha": "e193cb0ac2cdc11bed39cc143d3a7edf7d40d64b62b61c30dcf273e9db5ffd0d",
         "path_count": 4
       }
+    },
+    "T30": {
+      "status": "done",
+      "attempts": 1,
+      "failures": 0,
+      "model": "codex",
+      "input_hash": "32ddd2e758893f669e516b8211b4f543b70020e2f02be7d8039e41a59c4bf655",
+      "triaged_attempt": 0,
+      "blocked": null,
+      "requires": null,
+      "extra_attempts": 0,
+      "baseline": {
+        "task_0": {
+          "cmd": "python -m unittest discover -s tests -p test_run_logs.py -v",
+          "ok": true,
+          "exit": 0,
+          "sha": "8d8b99525fd2ccfd0c837c3d97bd91e76ae962e4014ef3a25cc59b7fd4621c0f",
+          "run_id": "b916d8829f9144b1811c3e8bf571222a",
+          "log": "20261024-012713-0000-T30-baseline-task-0-b916d8829f9144b1811c3e8bf571222a.log"
+        }
+      },
+      "start": {
+        "approval_epoch": 298,
+        "start_base_sha": "e193cb0ac2cdc11bed39cc143d3a7edf7d40d64b62b61c30dcf273e9db5ffd0d",
+        "start_snapshot_sha": "e193cb0ac2cdc11bed39cc143d3a7edf7d40d64b62b61c30dcf273e9db5ffd0d",
+        "plan_raw_sha": "319ad087dcb02894a4f79804d69385f07d532624294e8fd8688009c0ded14659",
+        "config_sha": "5049144895bfe19f3c8fbbf9a9c1dce3006f6e2ab9ab5d41127ad50a1e15a0a9",
+        "ignore_sha": "a30a615a8125bdf78d132161a5777d65be1268bc48281883c20d8170189c801f",
+        "card_sha": "0b9c8d5bd664baf5519a132e1e72dec4f2b0eb6ac07163878c9074cb106c2423",
+        "seq": 341
+      },
+      "completion": {
+        "schema": "osr.completion.v1",
+        "task": "T30",
+        "attempt": 1,
+        "approval_epoch": 298,
+        "plan_sha": "319ad087dcb02894a4f79804d69385f07d532624294e8fd8688009c0ded14659",
+        "config_sha": "5049144895bfe19f3c8fbbf9a9c1dce3006f6e2ab9ab5d41127ad50a1e15a0a9",
+        "ignore_sha": "a30a615a8125bdf78d132161a5777d65be1268bc48281883c20d8170189c801f",
+        "card_sha": "0b9c8d5bd664baf5519a132e1e72dec4f2b0eb6ac07163878c9074cb106c2423",
+        "inputs_sha": "4e90d6ba078be3273ca4f9e01e08035bf897a379bdeade46407f6720c47d0ddb",
+        "start_base_sha": "e193cb0ac2cdc11bed39cc143d3a7edf7d40d64b62b61c30dcf273e9db5ffd0d",
+        "start_snapshot_sha": "e193cb0ac2cdc11bed39cc143d3a7edf7d40d64b62b61c30dcf273e9db5ffd0d",
+        "verified_fp": "708619e5998a2acfbdcd67889812d80f80ed5c1b3fb0ce3f6555e88a2b1fcc62",
+        "verify_seq": 345,
+        "spec_review_seq": 346,
+        "quality_review_seq": 347,
+        "start_seq": 341,
+        "delta": {
+          "CONTRIBUTING.md": "d942861a77e1fbfdf31a044795524c30c528368dc233161cf6f731651ee98096",
+          "references/guarantees.md": "39835d518b02a8d19e6c5b539a23c682670993079619e881df10f3bef885b34c",
+          "CHANGELOG.md": "abceec58b5047acfbdd9624a526faf9514be5d242f4c88886ca027126fae964c",
+          "SKILL.md": "8a026243e88618b53b336baf9c93d5e3fe8cf09dbf1453c261e6e4bc060cd2a5",
+          "README.md": "346ad75739856b9046b7dee9eca526ee2c0217e8c4837eba305ee923cf270fb8",
+          "references/setups.md": "91adb50cf2d2472f8482e0ab6f8e277f95d1a4c8ca26dc521b1a19b82f623125",
+          "integrations/README.md": "f8d32741c15bdedf19211739ec2de25e5f8768d7f75f833f4b20a1a2c28f32e0"
+        },
+        "result_sha": "d45efd2e7a800b2c3194d0f0c15e4a54e335c588b956813455f1f074ded99e17",
+        "path_count": 7
+      }
+    },
+    "T31": {
+      "status": "done",
+      "attempts": 1,
+      "failures": 0,
+      "model": "codex",
+      "input_hash": "bb1208c461ce439d132b2430485c176e8e8c2a58952d45dd901ed86de2b69b00",
+      "triaged_attempt": 0,
+      "blocked": null,
+      "requires": null,
+      "extra_attempts": 0,
+      "baseline": {
+        "task_0": {
+          "cmd": "python -m unittest discover -s tests -p test_run_logs.py -v",
+          "ok": true,
+          "exit": 0,
+          "sha": "f94a837e9c0d4d97f44c77970c1cfa0c239e049bd6ce8a16d49fab5c9b62e849",
+          "run_id": "c6250401bd814933a0b50b177c54e2a7",
+          "log": "20261024-013100-0000-T31-baseline-task-0-c6250401bd814933a0b50b177c54e2a7.log"
+        }
+      },
+      "start": {
+        "approval_epoch": 298,
+        "start_base_sha": "d45efd2e7a800b2c3194d0f0c15e4a54e335c588b956813455f1f074ded99e17",
+        "start_snapshot_sha": "d45efd2e7a800b2c3194d0f0c15e4a54e335c588b956813455f1f074ded99e17",
+        "plan_raw_sha": "319ad087dcb02894a4f79804d69385f07d532624294e8fd8688009c0ded14659",
+        "config_sha": "5049144895bfe19f3c8fbbf9a9c1dce3006f6e2ab9ab5d41127ad50a1e15a0a9",
+        "ignore_sha": "a30a615a8125bdf78d132161a5777d65be1268bc48281883c20d8170189c801f",
+        "card_sha": "78e7637bb7ced2c1143288f0964aece67070ea90075956ea179efc7f8e8b3096",
+        "seq": 349
+      },
+      "completion": {
+        "schema": "osr.completion.v1",
+        "task": "T31",
+        "attempt": 1,
+        "approval_epoch": 298,
+        "plan_sha": "319ad087dcb02894a4f79804d69385f07d532624294e8fd8688009c0ded14659",
+        "config_sha": "5049144895bfe19f3c8fbbf9a9c1dce3006f6e2ab9ab5d41127ad50a1e15a0a9",
+        "ignore_sha": "a30a615a8125bdf78d132161a5777d65be1268bc48281883c20d8170189c801f",
+        "card_sha": "78e7637bb7ced2c1143288f0964aece67070ea90075956ea179efc7f8e8b3096",
+        "inputs_sha": "81f9955eb4592dbfa956e8c80e0d635ca4e2aa964cb19ccd538bdaf624531513",
+        "start_base_sha": "d45efd2e7a800b2c3194d0f0c15e4a54e335c588b956813455f1f074ded99e17",
+        "start_snapshot_sha": "d45efd2e7a800b2c3194d0f0c15e4a54e335c588b956813455f1f074ded99e17",
+        "verified_fp": "32e7608d80bfdb79d425724afa2a4a43dcc63b7568962d7cc69f3e57a9ae8238",
+        "verify_seq": 352,
+        "spec_review_seq": 353,
+        "quality_review_seq": 354,
+        "start_seq": 349,
+        "delta": {
+          "PROMPT-ONLY.md": "2d2a6e1145a1ab7fba8311f9dff25e669445268104ab0ff53e3bcdab4c66ed6b",
+          "ROADMAP.md": "a4c09adecb326f159829a67cb594b417bfadf48d21e388020d3fb88f4a891505"
+        },
+        "result_sha": "86dc8086e8c449cb54f035daabe753a70a1b0eab27060922f9d886466941cce6",
+        "path_count": 2
+      }
     }
   },
   "waivers": [

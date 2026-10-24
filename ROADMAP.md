@@ -1,5 +1,7 @@
 # osr v0.3 Roadmap: Seams, Fixtures and Honest Verification
 
+> **Historical planning document.** This records the v0.3 design and its original proposed phases; it is not the current feature/status contract. See [README.md](README.md) for current behavior and validation, [CHANGELOG.md](CHANGELOG.md) for completed history, and the [preserved v0.3.2 proposal](docs/planning/v0.3.2-proposal/README.md) for deferred work. The original proposal below is retained for provenance.
+
 Repo: https://github.com/De-pitcher/orchestrator-supervisor-reviewer
 
 Origin: a real-use audit on a multi-repo project found four classes of bug that v0.2.0 passed as green:

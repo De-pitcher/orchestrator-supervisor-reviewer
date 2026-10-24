@@ -52,7 +52,7 @@ With one model, switch hats explicitly and start the reviewer pass fresh: re-rea
 
 Each phase has a gate the tool enforces. You cannot skip ahead because the next command refuses.
 
-**Phase 0, ground truth.** `osr init`, then `osr detect`, then read and correct `.ai/config.json`, then `osr confirm-commands`. Detect only guesses from marker files; confirm actually runs each command and records whether it works. Brand-new project with nothing to run? Set `"allow_no_commands": true`, and expect many requirements to need human sign-off.
+**Phase 0, ground truth.** `osr init`, then `osr detect`, then read and correct `.ai/config.json`, then `osr confirm-commands`. Detect only guesses from marker files; confirm actually runs each command and records whether it works. Confirm each exact command a card will execute: only outer whitespace is ignored; an executable-wide permission is never implied. Brand-new project with nothing to run? Set `"allow_no_commands": true`, and expect many requirements to need human sign-off. This compatibility escape is not evidence of confirmation.
 
 **Phase 1, plan.** Fill `.ai/PLAN.md` from the user's design (template in `assets/PLAN.md`): goal, non-goals, numbered requirements `R1..Rn`, each with a concrete acceptance criterion and `Check: auto|manual` (manual checks reference a test script file), plus interfaces and open questions. Put every doubt in Open Questions and resolve it with the human. Run `osr plan-check`. Then **stop and ask the human to review and run `osr approve-plan --by <name>`**. Editing PLAN.md afterwards voids the approval.
 
@@ -68,11 +68,15 @@ Each phase has a gate the tool enforces. You cannot skip ahead because the next 
 
 **Phase 7, integrate.** After dependent tasks finish, run the integration task. Components that pass alone can fail together; do not skip this.
 
+**Evidence and freshness.** Each command has its own exclusive-created log, run identity and raw-byte digest. Named-test evidence comes only from successful current output whose retained log passes the digest check; stale XML is never discovered automatically. Use supported canonical IDs or an unambiguous short name. Unsupported output, including multiline verbose-unittest descriptions, may leave named evidence missing; see `references/guarantees.md`. Plan approval binds a governed baseline, `start` rejects unexplained drift and `verify` rejects governed writes during execution. Completion records reviewed deltas; later reviewed tasks may supersede earlier bytes. Changed approval/configuration or legacy evidence requires explicit human migration, never invented historical credit.
+
 **Phase 8, audit.** `osr audit` writes `.ai/AUDIT.md`: every requirement mapped to a task and evidence. Run `osr anchor --out <external-path>` to commit the ledger head hash out-of-band (e.g. to a supervisor-controlled volume or CI artifact store). In-repo anchors (`.osr-anchor`) do not protect against models with repository write permissions; tamper-evidence requires out-of-band anchor verification via `osr ledger-verify --anchor <path>` and `osr audit --anchor <path>`. Exit 0 means all verified or human-signed. Exit 2 means finished, with items awaiting human sign-off. Exit 1 means gaps. Report the audit to the human as it is, including UNVERIFIED items and waivers.
+
+Use `osr audit --check` for the same acceptance verdict without writing project files. The Git hook requires this verdict and checks the complete governed index, including required governance evidence, against the accepted working artifact. It does not stage files or run tests, and `--no-verify` can bypass it. `--by` and reviewer/model names are self-reported labels; optional secrets and harness hooks do not authenticate the actor. External anchors protect only the pinned prefix while a trusted verifier compares it.
 
 ## Scale the paperwork, never the gates
 
-- **Quick path** (small bug fixes): for single-command verification with zero card overhead, run `osr quick --verify "<cmd>" --allowed "<file1>,<file2>"`. Scope limits and real command verification are strictly enforced.
+- **Quick path** (small bug fixes): for single-command verification with zero card overhead, run `osr quick --verify "<cmd>" --allowed "<file1>,<file2>"`. The exact command must be confirmed and any existing approval must be fresh. Quick records command evidence, not task completion or reviewed acceptance of a changed governed artifact.
 - **Lite** (a small fix): one requirement, one card, a short plan. The gates still run.
 - **Standard** (a feature): the full flow above.
 - **Full** (large or risky work): add an Interfaces section, an integration task, a different model as reviewer (`require_distinct_reviewer`), and run `osr ledger-verify` and `osr audit` in CI.
