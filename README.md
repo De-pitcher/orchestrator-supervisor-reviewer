@@ -224,3 +224,13 @@ The workflow includes exact confirmed commands, immutable current-run logs, cano
 ## License
 
 MIT, see [`LICENSE`](LICENSE).
+
+## Contributing and project governance
+
+Start with [CONTRIBUTING.md](CONTRIBUTING.md) and the
+[architecture map](docs/ARCHITECTURE.md). Use [SUPPORT.md](SUPPORT.md) for help,
+[SECURITY.md](SECURITY.md) for private vulnerability reporting and
+[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) for community standards.
+[GOVERNANCE.md](GOVERNANCE.md) explains protected-main policy, ownership and the
+explicit solo-maintainer review exception. [Release guidance](docs/RELEASING.md)
+distinguishes the current source-checkout skill from future packaged releases.

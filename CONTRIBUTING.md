@@ -4,6 +4,7 @@ OSR is in active development. Package metadata is at 0.3.1; current changes are 
 
 ## Ground rules
 
+- Follow the [code of conduct](CODE_OF_CONDUCT.md), [governance](GOVERNANCE.md) and [security reporting policy](SECURITY.md). See [SUPPORT.md](SUPPORT.md) for help and the [architecture map](docs/ARCHITECTURE.md) for where changes belong.
 - **Keep the core idea intact:** the AI proposes, the tool decides. A change that lets an AI's claim count as evidence will not be accepted.
 - **Stdlib only** for `scripts/osr.py`. No third-party dependencies, so it runs anywhere Python does.
 - **Behavior changes need meaningful tests** in the relevant `tests/test_*.py` module. End-to-end CLI tests live in `tests/test_osr.py`; focused modules cover logs, authorization, test evidence, freshness and Git gates. Preserve both an attack/rejection case and a valid clean control.
@@ -36,3 +37,16 @@ The current inventory is 251 tests. The GitHub Actions workflow runs full discov
 - Making human-only commands cryptographically distinct (for example, a separate approval token) rather than honor-system.
 - Mutation testing hooks as a first-class gate.
 - Support for parallel tasks and multiple agents working at once (file locking on state).
+
+## Pull requests and releases
+
+Use the issue forms for reproducible bugs and behavior proposals. Topic branches
+feed `dev`; the human maintainer reviews `dev` → `main` PRs. Main requires green
+up-to-date CI and resolved conversations, including for administrators. The
+documented solo-maintainer policy currently requires no independent approval;
+do not describe that as independent review. Include the exact checks actually
+run and any unverified cases in the PR template.
+
+Keep unrelated refactors, packaging and release publication out of a focused fix.
+Follow [the release process](docs/RELEASING.md) before claiming a published or
+fully packaged skill. Do not raise an issue publicly for a vulnerability.
