@@ -1,0 +1,39 @@
+{
+  "ok": true,
+  "matrix_jobs": 15,
+  "gate_failure_cases": [
+    {
+      "matrix_result": "success",
+      "exit": 0,
+      "output": "Matrix result: success"
+    },
+    {
+      "matrix_result": "failure",
+      "exit": 1,
+      "output": "Matrix result: failure"
+    },
+    {
+      "matrix_result": "cancelled",
+      "exit": 1,
+      "output": "Matrix result: cancelled"
+    },
+    {
+      "matrix_result": "skipped",
+      "exit": 1,
+      "output": "Matrix result: skipped"
+    },
+    {
+      "matrix_result": "",
+      "exit": 1,
+      "output": "Matrix result:"
+    }
+  ],
+  "forms": [
+    "bug_report",
+    "feature_request"
+  ],
+  "local_links_checked": 46,
+  "immutable_actions": true,
+  "read_only_permissions": true,
+  "runtime_unchanged": true
+}

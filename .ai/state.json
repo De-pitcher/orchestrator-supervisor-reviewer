@@ -659,6 +659,128 @@
         "result_sha": "86dc8086e8c449cb54f035daabe753a70a1b0eab27060922f9d886466941cce6",
         "path_count": 2
       }
+    },
+    "T32": {
+      "status": "done",
+      "attempts": 1,
+      "failures": 0,
+      "model": "codex",
+      "input_hash": "a3028a436df0a378156df5eb6ca898c6b5a79f5fa4d44bab8972b30ab374bbc8",
+      "triaged_attempt": 0,
+      "blocked": null,
+      "requires": null,
+      "extra_attempts": 0,
+      "baseline": {
+        "task_0": {
+          "cmd": "python -m unittest discover -s tests -p test_run_logs.py -v",
+          "ok": true,
+          "exit": 0,
+          "sha": "025acbe9751bfd9594b5aa0b9d8a2dc08d9649849278b436435562ab23715819",
+          "run_id": "ad90004573bc41c28f1be5780151a053",
+          "log": "20261024-015309-0000-T32-baseline-task-0-ad90004573bc41c28f1be5780151a053.log"
+        }
+      },
+      "start": {
+        "approval_epoch": 298,
+        "start_base_sha": "86dc8086e8c449cb54f035daabe753a70a1b0eab27060922f9d886466941cce6",
+        "start_snapshot_sha": "86dc8086e8c449cb54f035daabe753a70a1b0eab27060922f9d886466941cce6",
+        "plan_raw_sha": "319ad087dcb02894a4f79804d69385f07d532624294e8fd8688009c0ded14659",
+        "config_sha": "5049144895bfe19f3c8fbbf9a9c1dce3006f6e2ab9ab5d41127ad50a1e15a0a9",
+        "ignore_sha": "a30a615a8125bdf78d132161a5777d65be1268bc48281883c20d8170189c801f",
+        "card_sha": "96e7ea1f6e06207d0a630875a3ebf50f92402c143cb4e5672153f340502ec9dc",
+        "seq": 356
+      },
+      "completion": {
+        "schema": "osr.completion.v1",
+        "task": "T32",
+        "attempt": 1,
+        "approval_epoch": 298,
+        "plan_sha": "319ad087dcb02894a4f79804d69385f07d532624294e8fd8688009c0ded14659",
+        "config_sha": "5049144895bfe19f3c8fbbf9a9c1dce3006f6e2ab9ab5d41127ad50a1e15a0a9",
+        "ignore_sha": "a30a615a8125bdf78d132161a5777d65be1268bc48281883c20d8170189c801f",
+        "card_sha": "96e7ea1f6e06207d0a630875a3ebf50f92402c143cb4e5672153f340502ec9dc",
+        "inputs_sha": "0785cacbeb9ae7b07a15c496ee080c27f96ea64855f60e5e8e105a3282d2e78b",
+        "start_base_sha": "86dc8086e8c449cb54f035daabe753a70a1b0eab27060922f9d886466941cce6",
+        "start_snapshot_sha": "86dc8086e8c449cb54f035daabe753a70a1b0eab27060922f9d886466941cce6",
+        "verified_fp": "f2c5074918d1671262377be684b5c9486f5d05a3bfcd324f7309261a5948c4ab",
+        "verify_seq": 359,
+        "spec_review_seq": 360,
+        "quality_review_seq": 361,
+        "start_seq": 356,
+        "delta": {
+          "CHANGELOG.md": "55fb3add9236ee87d289dfd3c9025fa908d91cb6c3d10b113bd54497ca5d8716",
+          "CONTRIBUTING.md": "1e0d84a97fb76968ce6ddb0c33b0ee687fcbd8676afa8474fbce35fa3e909e78",
+          "docs/ARCHITECTURE.md": "ed53c59b5c1e0a2977c9460246322ef8866fb4430e544dba560395ba63e200e3",
+          "SECURITY.md": "93376b32b88715ad8a1aaf490ac09c9311011b6c1ad420f260d1f0cca5bfa264",
+          "CODE_OF_CONDUCT.md": "2dc4b48b8defe27c32531e3d304f1ec06fccd4661b2395437f7ea33d7c74ce95",
+          "SUPPORT.md": "2c727dccfec73450cbb6c35683e5c784208bd66419c446ee1c08844ef9c9ae60",
+          "GOVERNANCE.md": "6afea013bbf6344c8336233a5ba3a99c83dae25c811e3f531b5da647a7a266a9",
+          "docs/RELEASING.md": "35b8c4895190520779286ec40666498e41067ed0419533581495fbbb7270b6db",
+          "README.md": "be7880542189b8787c0c8b9fac3a6996fd3570b294604744c013843992b8faeb"
+        },
+        "result_sha": "3551f777f442b4016d63db6d99082836c8c19345aae02628ac8b0fa8e5f12db9",
+        "path_count": 9
+      }
+    },
+    "T33": {
+      "status": "done",
+      "attempts": 1,
+      "failures": 0,
+      "model": "codex",
+      "input_hash": "1851a3f99bcdd5b537be2aaea7b2696b9680b033f2d8158860b3ffa0b457bc67",
+      "triaged_attempt": 0,
+      "blocked": null,
+      "requires": null,
+      "extra_attempts": 0,
+      "baseline": {
+        "task_0": {
+          "cmd": "python -m unittest discover -s tests -p test_run_logs.py -v",
+          "ok": true,
+          "exit": 0,
+          "sha": "1c5a36dbb33ad380b5d92b8ecbfac99b70d58dccc5bea47288c0cd9eb9ead273",
+          "run_id": "9de8cca6ee744ae982feb8914dfbe3a2",
+          "log": "20261024-015637-0000-T33-baseline-task-0-9de8cca6ee744ae982feb8914dfbe3a2.log"
+        }
+      },
+      "start": {
+        "approval_epoch": 298,
+        "start_base_sha": "3551f777f442b4016d63db6d99082836c8c19345aae02628ac8b0fa8e5f12db9",
+        "start_snapshot_sha": "3551f777f442b4016d63db6d99082836c8c19345aae02628ac8b0fa8e5f12db9",
+        "plan_raw_sha": "319ad087dcb02894a4f79804d69385f07d532624294e8fd8688009c0ded14659",
+        "config_sha": "5049144895bfe19f3c8fbbf9a9c1dce3006f6e2ab9ab5d41127ad50a1e15a0a9",
+        "ignore_sha": "a30a615a8125bdf78d132161a5777d65be1268bc48281883c20d8170189c801f",
+        "card_sha": "de6aa4d31c5433f4f6562babd937d8e35e028023b7afbc9519d43632ee2f67c7",
+        "seq": 363
+      },
+      "completion": {
+        "schema": "osr.completion.v1",
+        "task": "T33",
+        "attempt": 1,
+        "approval_epoch": 298,
+        "plan_sha": "319ad087dcb02894a4f79804d69385f07d532624294e8fd8688009c0ded14659",
+        "config_sha": "5049144895bfe19f3c8fbbf9a9c1dce3006f6e2ab9ab5d41127ad50a1e15a0a9",
+        "ignore_sha": "a30a615a8125bdf78d132161a5777d65be1268bc48281883c20d8170189c801f",
+        "card_sha": "de6aa4d31c5433f4f6562babd937d8e35e028023b7afbc9519d43632ee2f67c7",
+        "inputs_sha": "521952f4d2b800722f16495bcb0a44d1c7c684e3c9596922ea61d3765c4401a4",
+        "start_base_sha": "3551f777f442b4016d63db6d99082836c8c19345aae02628ac8b0fa8e5f12db9",
+        "start_snapshot_sha": "3551f777f442b4016d63db6d99082836c8c19345aae02628ac8b0fa8e5f12db9",
+        "verified_fp": "adad068ac7052731ed17ec6b9eadb1650a383a5c6d3ec98bc5a510eb5ea3b73e",
+        "verify_seq": 367,
+        "spec_review_seq": 368,
+        "quality_review_seq": 369,
+        "start_seq": 363,
+        "delta": {
+          ".github/pull_request_template.md": "6cfef171caded614b43ffedcea111a0984e213550af682e2d3df0c8721349887",
+          ".github/ISSUE_TEMPLATE/bug_report.yml": "2ff349925a3801c413ea6e3ec08047eb53d9a748ae0d67392b5f3aecf12fe7c0",
+          ".github/ISSUE_TEMPLATE/config.yml": "e59f631b56f4a0d51387ad6f8c3e7c105f598c0e4f164237ea07ca778dfd4097",
+          ".github/CODEOWNERS": "193ae69c5cf06820faf3c506e96a7663a2e2b3b4b751bd1fc9592baac696ace3",
+          ".github/dependabot.yml": "d847719429382ca16d81083aca66c556a5ca7c2cf5e3d56babe7aa88845b05a6",
+          ".github/workflows/test.yml": "add5041d299c93f4b12784c92535ce566c4d52687461fed26d3c106a6264ab8c",
+          ".github/ISSUE_TEMPLATE/feature_request.yml": "6b64beeda6996fb8e0391dcb058aa79f728ec7e52f0c301ed47b5a17c5f606e6"
+        },
+        "result_sha": "d44e9ecb79ade9b4597716abb732782a8f0e23c81a4c729534d8f041fb910355",
+        "path_count": 7
+      }
     }
   },
   "waivers": [

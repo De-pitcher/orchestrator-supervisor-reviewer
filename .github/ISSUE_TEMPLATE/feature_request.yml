@@ -1,0 +1,30 @@
+name: Feature request
+description: Propose a scoped improvement and its compatibility requirements.
+title: "[Feature]: "
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: Describe the use case and current limitation, with an example.
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Proposed behavior
+      description: Describe observable behavior, alternatives and what is out of scope.
+    validations:
+      required: true
+  - type: textarea
+    id: compatibility
+    attributes:
+      label: Compatibility and trust impact
+      description: Consider existing commands, state, evidence, permissions and downstream users.
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: How it could be verified
+      description: Suggest an attack or failure case and a valid clean control.

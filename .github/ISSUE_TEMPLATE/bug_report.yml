@@ -1,0 +1,44 @@
+name: Bug report
+description: Report a reproducible defect in OSR behavior.
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        For vulnerabilities, use the private reporting link instead of this public form.
+        Do not share tokens, approval secrets or unreviewed private .ai data.
+  - type: input
+    id: version
+    attributes:
+      label: OSR version and commit
+      description: Include osr --version and the commit or tag used.
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Python version and relevant harness or Git version.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Exact commands and minimal files needed to reproduce the issue.
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: Expected and actual behavior
+      description: Explain the expected result and paste the complete relevant error.
+    validations:
+      required: true
+  - type: checkboxes
+    id: disclosure
+    attributes:
+      label: Before submitting
+      options:
+        - label: I removed secrets and private data and this is not a private vulnerability report.
+          required: true

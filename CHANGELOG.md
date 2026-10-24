@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Repository governance foundation — 2026-10-24
+- Protected `main` through GitHub settings: pull requests, strict passing checks,
+  resolved conversations and administrator enforcement; force pushes/deletion
+  disabled. The maintainer explicitly chose zero mandatory independent approvals
+  while the repository has one collaborator.
+- Enabled private vulnerability reporting and added security, conduct, support,
+  governance, architecture and release-process documentation. The user-approved
+  private conduct contact is distinct from the security reporting form.
+- Repository intake, ownership and CI configuration are prepared separately from
+  package refactoring or publication. No published-release or packaging-readiness
+  claim is implied by this foundation.
+
 ### CI portability follow-up — 2026-10-24
 - PR #3 exposed two failures outside the original Windows/Python 3.14 run:
   Unix Git ignored the nonexecutable hook wrapper, and rapid same-size fixture
