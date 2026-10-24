@@ -13,7 +13,7 @@ Enforces the gates below for the tool-call shapes configured in the Antigravity 
   - Blocks attempts to read the approval secret.
 - **`stop_hook.py`**:
   - Intercepts `Stop` events when the agent attempts to conclude its work.
-  - Runs `osr next`; if unfinished tasks remain, it forces continuation (`terminationBehavior: force_continue`) with actionable instructions.
+  - Inspects task state and, when it considers the workflow incomplete, calls `osr next` and returns `decision: continue`, `terminationBehavior: force_continue` and actionable instructions. This requests continuation in the configured harness; it is not an independent acceptance audit or an OS enforcement boundary.
 
 ### Installation in Antigravity
 Copy or symlink `integrations/antigravity/hooks.json` into your workspace `.agents/` directory or global configuration `~/.gemini/config/`.
@@ -43,3 +43,7 @@ On Windows PowerShell:
 ```powershell
 Copy-Item integrations/git/pre-commit .git/hooks/pre-commit
 ```
+
+The wrapper is tracked as executable (`100755`). On POSIX, preserve that mode when copying; Git silently ignores a nonexecutable hook. The helper must be available at `integrations/git/pre_commit.py`, or copy it beside the wrapper at `.git/hooks/pre_commit.py` for the documented pair layout. Unsupported layouts fail with a diagnostic. Windows mode checks do not substitute for POSIX installation validation.
+
+The hook, wrapper layouts and the rest of the configured suite passed the [Ubuntu/macOS/Windows × Python 3.8–3.12 PR matrix](https://github.com/De-pitcher/orchestrator-supervisor-reviewer/actions/runs/40043053441) for `58a16e6`. This verifies the tested paths; it does not prove every external harness honors hook responses or that raw approval baselines are portable between checkouts. See [the guarantees](../references/guarantees.md) for remaining limits.

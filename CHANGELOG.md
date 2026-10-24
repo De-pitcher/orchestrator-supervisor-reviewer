@@ -15,8 +15,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   permission. Fixture writes invalidate only the rewritten module's compiled
   cache; a deterministic equal-size/equal-timestamp regression preserves an
   unrelated cache and checks that the new source is actually imported.
-- The earlier 249-test result remains a historical local result. Cross-platform
-  CI outcomes for this follow-up are reported separately on PR #3.
+- Discovery increased to **251 tests**. For commit `58a16e6`, both the
+  [push matrix](https://github.com/De-pitcher/orchestrator-supervisor-reviewer/actions/runs/40043049298)
+  and [PR matrix](https://github.com/De-pitcher/orchestrator-supervisor-reviewer/actions/runs/40043053441)
+  passed all 15 Ubuntu/macOS/Windows × Python 3.8–3.12 jobs, with no skips.
+  The earlier 249-test result below remains a historical local result.
+- Synchronized skill instructions, current status, contribution/setup guides
+  and guarantees with those results, exact-command/evidence rules and the
+  remaining parser and trust limitations. No release or version bump is implied.
 
 ### Evidence hardening — 2026-10-23–24
 

@@ -1,0 +1,20 @@
+{
+  "ok": true,
+  "documentation_files": [
+    "README.md",
+    "SKILL.md",
+    "CONTRIBUTING.md",
+    "CHANGELOG.md",
+    "references/setups.md",
+    "references/guarantees.md",
+    "integrations/README.md"
+  ],
+  "local_links_checked": 14,
+  "discovery": {
+    "ids": 251,
+    "modules": 14
+  },
+  "ci_commit": "58a16e63d0a50b9264a308d747e93171b1b44ca6",
+  "successful_matrix_jobs": 30,
+  "package_version": "0.3.1"
+}

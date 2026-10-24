@@ -1,4 +1,4 @@
-# Audit  (2026-10-24T00:02:59Z)
+# Audit  (2026-10-24T00:32:19Z)
 
 Ledger integrity: ok. Plan approved and unchanged: True.
 
@@ -6,7 +6,7 @@ Ledger integrity: ok. Plan approved and unchanged: True.
 
 - Approval epoch: 298
 - Baseline: 84 governed files, digest 03c2b33a7f2a5eb111e143d90523ba4c0c4bc4d659fb26a4506dd951b1ec39e6
-- Accepted map: 84 governed files, digest e193cb0ac2cdc11bed39cc143d3a7edf7d40d64b62b61c30dcf273e9db5ffd0d
+- Accepted map: 84 governed files, digest 86dc8086e8c449cb54f035daabe753a70a1b0eab27060922f9d886466941cce6
 - approval epoch 298 baseline: 84 governed files
 
 ### Archived history (disclosed, no current credit)
@@ -44,10 +44,10 @@ Ledger integrity: ok. Plan approved and unchanged: True.
 | R22 | auto | T27 | VERIFIED | scripts/osr.py:1509 |
 | R23 | auto | T27 | VERIFIED | scripts/osr.py:2732 |
 | R24 | auto | T26,T27,T29 | VERIFIED | integrations/git/pre_commit.py:534 |
-| R25 | auto | T27,T28,T29 | VERIFIED | tests/test_osr.py:197 |
+| R25 | auto | T27,T28,T29,T30,T31 | VERIFIED | tests/test_osr.py:197 |
 
 ## Waivers (decisions to bypass a flag)
 - T1 unanchored-mock:tests/test_hardening_hypotheses.py: tests/test_hardening_hypotheses.py is the Phase B adversarial test suite testing mock evasion across hypotheses, not an unanchored mock for T1 (approved by AI only)
 
 ## Self-reviewed (implementer == reviewer)
-T1, T2, T24, T28, T29, T4, T5, T6
+T1, T2, T24, T28, T29, T30, T31, T4, T5, T6
