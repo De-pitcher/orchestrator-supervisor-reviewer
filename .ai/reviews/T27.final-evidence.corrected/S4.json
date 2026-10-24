@@ -1,0 +1,121 @@
+{
+  "argv": [
+    "C:\\Python314\\python.exe",
+    ".ai/t27_s4_runner.py"
+  ],
+  "benchmark_report_file": ".ai/reviews/T27.final-evidence.corrected/S4.benchmark-report.json",
+  "benchmark_report_invocations": 1,
+  "benchmark_report_sha256": "eb44be459d3d07dd7973e6608a459af34d671823d66dbd40e486e25663109820",
+  "cwd": "C:\\Users\\sam\\Documents\\sparkz\\orchestrator-supervisor-reviewer",
+  "elapsed_seconds": 67.343,
+  "exit": 0,
+  "id": "S4",
+  "kind": "supplementary-ids",
+  "log": ".ai/reviews/T27.final-evidence.corrected/S4.log",
+  "log_sha256": "5ff7ca4e55f54edf5eaab7a067fc8503e9d825c05ad4d4734952399daf032591",
+  "missing_ids": [],
+  "observed_count": 10,
+  "observed_ids": [
+    "test_osr.OsrTests.test_seams_plan_check_warning_when_seams_table_missing",
+    "test_osr.OsrTests.test_spec_triage_blocks_until_human_unblocks",
+    "test_osr.OsrTests.test_task_check_enforces_seam_authoritative_source_in_context_files",
+    "test_osr.OsrTests.test_unanchored_mock_heuristic_flags_mock_without_fixture_and_waiver_resolves",
+    "test_osr.OsrTests.test_unconfirmed_commands_block_approval",
+    "test_osr.OsrTests.test_verify_command_must_be_confirmed",
+    "test_osr.OsrTests.test_waiver_rules",
+    "test_osr.OsrTests.test_adversarial_eval_suite_benchmarks_catch_rate",
+    "test_osr.OsrTests.test_phase6_benchmark_and_honest_reporting",
+    "test_osr.OsrTests.test_phase6_version_and_docs_integrity"
+  ],
+  "ok": true,
+  "pythonpath": "C:\\Users\\sam\\Documents\\sparkz\\orchestrator-supervisor-reviewer;C:\\Users\\sam\\Documents\\sparkz\\orchestrator-supervisor-reviewer\\tests",
+  "runner_meta": {
+    "benchmark_report_file": ".ai/reviews/T27.final-evidence.corrected/S4.benchmark-report.json",
+    "benchmark_report_invocations": 1,
+    "benchmark_report_sha256": "eb44be459d3d07dd7973e6608a459af34d671823d66dbd40e486e25663109820",
+    "cache_entry_is_returned_report": true,
+    "cache_key": null,
+    "cache_keys_after": [
+      "None"
+    ],
+    "elapsed_seconds": 67.115,
+    "import_paths": [
+      "C:\\Users\\sam\\Documents\\sparkz\\orchestrator-supervisor-reviewer",
+      "C:\\Users\\sam\\Documents\\sparkz\\orchestrator-supervisor-reviewer\\tests"
+    ],
+    "ok": true,
+    "python_executable": "C:\\Python314\\python.exe",
+    "python_version": "3.14.3 (tags/v3.14.3:323c59a, Feb  3 2026, 16:04:56) [MSC v.1944 64 bit (AMD64)]",
+    "report_summary": {
+      "catch_rate": 1.0,
+      "caught_ids": [
+        "V1",
+        "V10",
+        "V11",
+        "V12",
+        "V2",
+        "V3",
+        "V4",
+        "V5",
+        "V6",
+        "V7",
+        "V8",
+        "V9"
+      ],
+      "cheats_caught": 12,
+      "clean_runs_tested": 11,
+      "false_positive_rate": 0.0,
+      "false_positives": 0,
+      "known_misses": [],
+      "total_cheats_tested": 12,
+      "vector_status": {
+        "V1": "CAUGHT",
+        "V10": "CAUGHT",
+        "V11": "CAUGHT",
+        "V12": "CAUGHT",
+        "V2": "CAUGHT",
+        "V3": "CAUGHT",
+        "V4": "CAUGHT",
+        "V5": "CAUGHT",
+        "V6": "CAUGHT",
+        "V7": "CAUGHT",
+        "V8": "CAUGHT",
+        "V9": "CAUGHT"
+      },
+      "version": "0.3.1"
+    },
+    "runner_argv": [
+      "C:\\Python314\\python.exe",
+      ".ai/t27_s4_runner.py"
+    ],
+    "runner_file": ".ai/t27_s4_runner.py",
+    "schema": "osr.t27.s4-runner.v1",
+    "selected_ids": [
+      "test_osr.OsrTests.test_seams_plan_check_warning_when_seams_table_missing",
+      "test_osr.OsrTests.test_spec_triage_blocks_until_human_unblocks",
+      "test_osr.OsrTests.test_task_check_enforces_seam_authoritative_source_in_context_files",
+      "test_osr.OsrTests.test_unanchored_mock_heuristic_flags_mock_without_fixture_and_waiver_resolves",
+      "test_osr.OsrTests.test_unconfirmed_commands_block_approval",
+      "test_osr.OsrTests.test_verify_command_must_be_confirmed",
+      "test_osr.OsrTests.test_waiver_rules",
+      "test_osr.OsrTests.test_adversarial_eval_suite_benchmarks_catch_rate",
+      "test_osr.OsrTests.test_phase6_benchmark_and_honest_reporting",
+      "test_osr.OsrTests.test_phase6_version_and_docs_integrity"
+    ],
+    "sys_path_head": [
+      "C:\\Users\\sam\\Documents\\sparkz\\orchestrator-supervisor-reviewer",
+      "C:\\Users\\sam\\Documents\\sparkz\\orchestrator-supervisor-reviewer\\tests",
+      "C:\\Users\\sam\\Documents\\sparkz\\orchestrator-supervisor-reviewer\\.ai",
+      "C:\\Users\\sam\\Documents\\sparkz\\orchestrator-supervisor-reviewer"
+    ],
+    "test_errors": 0,
+    "test_failures": 0,
+    "tests_run": 10,
+    "working_directory": "C:\\Users\\sam\\Documents\\sparkz\\orchestrator-supervisor-reviewer"
+  },
+  "scheduled_count": 10,
+  "tree_digest_after": "fb0f2d19eb7a76a54aa0296ca923d9465f17aaca4a162116edc476a62f2c0fd4",
+  "tree_digest_before": "fb0f2d19eb7a76a54aa0296ca923d9465f17aaca4a162116edc476a62f2c0fd4",
+  "tree_unchanged": true,
+  "unexpected_ids": []
+}

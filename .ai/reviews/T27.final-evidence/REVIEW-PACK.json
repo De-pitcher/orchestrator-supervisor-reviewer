@@ -1,0 +1,23 @@
+{
+  "argv": [
+    "C:\\Python314\\python.exe",
+    "scripts/osr.py",
+    "review-pack",
+    "T27"
+  ],
+  "exit": 0,
+  "elapsed_seconds": 0.631,
+  "tree_digest_before": "b17deff95afe64050a38b2d24c0181972d2831ab32f85cf1884d0cf5e5c696fd",
+  "tree_digest_after": "b17deff95afe64050a38b2d24c0181972d2831ab32f85cf1884d0cf5e5c696fd",
+  "tree_unchanged": true,
+  "log": ".ai/reviews/T27.final-evidence/REVIEW-PACK.log",
+  "log_sha256": "9760b1f07b135793b7c2fc3a0206c44dddd7c4ffc841dbfc51a4396d942c7c6a",
+  "pack_file": ".ai/review-pack-T27.md",
+  "pack_exists": false,
+  "ledger_verify": {
+    "seq": 314,
+    "attempt": 1,
+    "ok": true,
+    "fp": "0dbdafb84e646e8daa70f15ce39595862e033aed25c10298f76373f9c348d487"
+  }
+}

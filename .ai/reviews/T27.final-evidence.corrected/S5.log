@@ -1,0 +1,31 @@
+test_h10_manual_path_audit_exit_code_2 (test_hardening_hypotheses.HardeningHypothesesTests.test_h10_manual_path_audit_exit_code_2)
+H10: Can Check: manual pass audit without human signoff? ... ok
+test_h11_anchor_in_repo_tamperability (test_hardening_hypotheses.HardeningHypothesesTests.test_h11_anchor_in_repo_tamperability)
+H11: An agent rewriting the whole ledger chain can also rewrite in-repo .osr-anchor. ... ok
+test_h12_antigravity_hooks_event_schema_contract (test_hardening_hypotheses.HardeningHypothesesTests.test_h12_antigravity_hooks_event_schema_contract)
+H12: Test stop_hook.py and pre_tool.py against actual Antigravity hook contracts. ... ok
+test_h13_plan_check_false_positive_warning_noise (test_hardening_hypotheses.HardeningHypothesesTests.test_h13_plan_check_false_positive_warning_noise)
+H13: Ordinary non-seam plan mentioning common words triggers heuristic warning. ... ok
+test_h1_fabricated_fixture_provenance_and_mandatory_conformance (test_hardening_hypotheses.HardeningHypothesesTests.test_h1_fabricated_fixture_provenance_and_mandatory_conformance)
+H1: A builder invents a wrong-shaped fixture, registers it, loads it in mock without conformance. ... ok
+test_h2_bogus_seam_source_declared_in_plan (test_hardening_hypotheses.HardeningHypothesesTests.test_h2_bogus_seam_source_declared_in_plan)
+H2: A card declares an invented mock/fixture file as authoritative source. ... ok
+test_h3_citation_path_mismatch_is_rejected (test_hardening_hypotheses.HardeningHypothesesTests.test_h3_citation_path_mismatch_is_rejected)
+H3: Quality review cites a seam from a non-authoritative file. ... ok
+test_h4_evaded_mock_detection_custom_stub (test_hardening_hypotheses.HardeningHypothesesTests.test_h4_evaded_mock_detection_custom_stub)
+H4: Mock created via manual stub class or monkeypatch without registered fixture. ... ok
+test_h5_tautological_assertion_v11 (test_hardening_hypotheses.HardeningHypothesesTests.test_h5_tautological_assertion_v11)
+H5: Replacing real assertion with assert 1 == 1 leaves count unchanged. ... ok
+test_h6_weak_verify_command_zero_tests_v12 (test_hardening_hypotheses.HardeningHypothesesTests.test_h6_weak_verify_command_zero_tests_v12)
+H6: Verify command matches zero tests or is a grep that checks token presence instead of behavior (V12). ... ok
+test_h7_negative_tests_semantic_vacuity (test_hardening_hypotheses.HardeningHypothesesTests.test_h7_negative_tests_semantic_vacuity)
+H7: negative_tests names a test that runs but asserts nothing (e.g. pass). ... ok
+test_h8_quick_path_cannot_mark_tasks_done (test_hardening_hypotheses.HardeningHypothesesTests.test_h8_quick_path_cannot_mark_tasks_done)
+H8: Can osr quick be used to bypass review gates on formal tasks? ... ok
+test_h9_review_pack_contains_no_builder_reasoning (test_hardening_hypotheses.HardeningHypothesesTests.test_h9_review_pack_contains_no_builder_reasoning)
+H9: Does review-pack contain builder reasoning or prior review text? ... ok
+
+----------------------------------------------------------------------
+Ran 13 tests in 41.077s
+
+OK

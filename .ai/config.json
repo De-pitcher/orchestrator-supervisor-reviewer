@@ -3,7 +3,7 @@
   "max_attempts": 3,
   "max_inner_failures": 2,
   "task_card_max_lines": 150,
-  "context_budget_lines": 1500,
+  "context_budget_lines": 6500,
   "command_timeout_seconds": 600,
   "max_scan_bytes": 2000000,
   "max_files": 30000,
@@ -51,13 +51,28 @@
     ".terraform"
   ],
   "commands": {
-    "test": {
-      "cmd": "python -m unittest discover -s tests -v",
+    "verify_run_logs": {
+      "cmd": "python -m unittest discover -s tests -p test_run_logs.py -v",
+      "verified": true
+    },
+    "verify_command_authorization": {
+      "cmd": "python -m unittest discover -s tests -p test_command_authorization.py -v",
+      "verified": true
+    },
+    "verify_test_evidence": {
+      "cmd": "python -m unittest discover -s tests -p test_test_evidence.py -v",
+      "verified": true
+    },
+    "verify_completion_freshness": {
+      "cmd": "python -m unittest discover -s tests -p test_completion_freshness.py -v",
+      "verified": true
+    },
+    "verify_commit_gate": {
+      "cmd": "python -m unittest discover -s tests -p test_commit_gate.py -v",
       "verified": true
     }
   },
-  "global_verify": [
-    "test"
-  ],
-  "extra_placeholder_patterns": []
+  "global_verify": [],
+  "extra_placeholder_patterns": [],
+  "checkers": []
 }

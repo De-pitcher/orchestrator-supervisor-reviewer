@@ -1,0 +1,9 @@
+{
+  "evidence_dir": ".ai/reviews/T27.final-evidence.corrected",
+  "freeze_digest": "fb0f2d19eb7a76a54aa0296ca923d9465f17aaca4a162116edc476a62f2c0fd4",
+  "governed_file_count": 84,
+  "ignore_sha": "a30a615a8125bdf78d132161a5777d65be1268bc48281883c20d8170189c801f",
+  "note": "Computed after all T27 corrections were written; every batch must keep this digest.",
+  "schedule": ".ai/reviews/T27.schedule.json",
+  "schema": "osr.t27.freeze.v1"
+}

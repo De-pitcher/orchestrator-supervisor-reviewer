@@ -1,0 +1,68 @@
+test_clean_control_no_workflow_hook (test_commit_gate.TestCommitGateCleanControl.test_clean_control_no_workflow_hook)
+A directory with no OSR workflow and no tooling is permitted. ... ok
+test_clean_control_no_workflow_with_tooling_present (test_commit_gate.TestCommitGateCleanControl.test_clean_control_no_workflow_with_tooling_present)
+A repository without .ai/ is permitted even when osr.py is installed. ... ok
+test_broken_ledger_is_rejected (test_commit_gate.TestEvidenceAttacks.test_broken_ledger_is_rejected) ... ok
+test_incomplete_task_is_rejected (test_commit_gate.TestEvidenceAttacks.test_incomplete_task_is_rejected) ... ok
+test_initialized_workflow_missing_tooling_is_rejected (test_commit_gate.TestEvidenceAttacks.test_initialized_workflow_missing_tooling_is_rejected) ... ok
+test_removed_local_tooling_with_external_cli_is_rejected_as_drift (test_commit_gate.TestEvidenceAttacks.test_removed_local_tooling_with_external_cli_is_rejected_as_drift)
+External tooling must not hide a deleted governed local script. ... ok
+test_stale_working_file_after_completion_is_rejected (test_commit_gate.TestEvidenceAttacks.test_stale_working_file_after_completion_is_rejected) ... ok
+test_widened_card_after_completion_is_rejected (test_commit_gate.TestEvidenceAttacks.test_widened_card_after_completion_is_rejected) ... ok
+test_bare_carriage_return_is_not_normalized (test_commit_gate.TestStagedByteParity.test_bare_carriage_return_is_not_normalized)
+A lone CR is not a CRLF/LF difference and must be rejected. ... ok
+test_byte_difference_beyond_newlines_is_rejected (test_commit_gate.TestStagedByteParity.test_byte_difference_beyond_newlines_is_rejected)
+Normalization covers CRLF/LF only, never spaces or other content. ... ok
+test_essential_state_with_head_index_is_rejected (test_commit_gate.TestStagedByteParity.test_essential_state_with_head_index_is_rejected)
+Essential governance is checked even when it is not a cached change. ... ok
+test_index_and_project_bytes_unchanged_on_reject (test_commit_gate.TestStagedByteParity.test_index_and_project_bytes_unchanged_on_reject) ... ok
+test_index_only_addition_is_rejected (test_commit_gate.TestStagedByteParity.test_index_only_addition_is_rejected)
+The extra blob is only in the index, so audit's tree is clean. ... ok
+test_negative_text_override_blocks_autocrlf_normalization (test_commit_gate.TestStagedByteParity.test_negative_text_override_blocks_autocrlf_normalization)
+-text is explicit; core.autocrlf must not make LF acceptable. ... ok
+test_partial_staging_after_restaging_passes (test_commit_gate.TestStagedByteParity.test_partial_staging_after_restaging_passes) ... ok
+test_partial_staging_is_rejected (test_commit_gate.TestStagedByteParity.test_partial_staging_is_rejected)
+Card example: stage a-b while only a+b on disk is verified. ... ok
+test_path_with_spaces_modified_staged_is_rejected (test_commit_gate.TestStagedByteParity.test_path_with_spaces_modified_staged_is_rejected) ... ok
+test_staged_addition_is_rejected (test_commit_gate.TestStagedByteParity.test_staged_addition_is_rejected) ... ok
+test_staged_deletion_of_governed_file_is_rejected (test_commit_gate.TestStagedByteParity.test_staged_deletion_of_governed_file_is_rejected) ... ok
+test_staged_governance_file_with_modified_worktree_is_rejected (test_commit_gate.TestStagedByteParity.test_staged_governance_file_with_modified_worktree_is_rejected)
+.ai/ is not in the audited manifest, so it needs its own byte check. ... ok
+test_staged_governance_removal_is_rejected (test_commit_gate.TestStagedByteParity.test_staged_governance_removal_is_rejected)
+An initialized workflow must keep its governance files staged. ... ok
+test_stale_case_alias_governance_bytes_are_rejected (test_commit_gate.TestStagedByteParity.test_stale_case_alias_governance_bytes_are_rejected)
+A differently cased governance path cannot satisfy the required set ... ok
+test_stale_staged_governance_bytes_are_rejected (test_commit_gate.TestStagedByteParity.test_stale_staged_governance_bytes_are_rejected)
+Disk evidence is current but the index carries an older copy. ... ok
+test_text_auto_binary_content_is_not_normalized (test_commit_gate.TestStagedByteParity.test_text_auto_binary_content_is_not_normalized)
+text=auto does not wave through NUL/binary staged bytes. ... ok
+test_unsupported_staged_transformation_is_rejected (test_commit_gate.TestStagedByteParity.test_unsupported_staged_transformation_is_rejected)
+A per-repo attribute that rewrites bytes cannot be verified. ... ok
+test_verified_working_file_with_head_index_is_rejected (test_commit_gate.TestStagedByteParity.test_verified_working_file_with_head_index_is_rejected)
+A verified file absent from cached-change names still needs staging. ... ok
+test_clean_control_audit_check_passes (test_commit_gate.TestVerifiedWorkflowControls.test_clean_control_audit_check_passes)
+Fixture guard: T25's read-only audit accepts this project. ... ok
+test_core_autocrlf_normalization_control_passes (test_commit_gate.TestVerifiedWorkflowControls.test_core_autocrlf_normalization_control_passes)
+core.autocrlf normalization is allowed for real Git text treatment. ... ok
+test_hook_writes_no_evidence_and_runs_no_commands_on_pass (test_commit_gate.TestVerifiedWorkflowControls.test_hook_writes_no_evidence_and_runs_no_commands_on_pass) ... ok
+test_line_ending_normalization_control_passes (test_commit_gate.TestVerifiedWorkflowControls.test_line_ending_normalization_control_passes)
+Staged LF bytes for a CRLF working file are Git normalization. ... ok
+test_negative_text_override_exact_bytes_control_passes (test_commit_gate.TestVerifiedWorkflowControls.test_negative_text_override_exact_bytes_control_passes)
+-text keeps raw bytes even when core.autocrlf would normalize. ... ok
+test_path_with_spaces_clean_control_passes (test_commit_gate.TestVerifiedWorkflowControls.test_path_with_spaces_clean_control_passes) ... ok
+test_text_auto_normalization_control_passes (test_commit_gate.TestVerifiedWorkflowControls.test_text_auto_normalization_control_passes)
+text=auto with ordinary text may normalize CRLF to LF. ... ok
+test_verified_staged_workflow_passes (test_commit_gate.TestVerifiedWorkflowControls.test_verified_staged_workflow_passes) ... ok
+test_wrapper_hooks_dir_sibling_helper_passes (test_commit_gate.TestWrapperInstallation.test_wrapper_hooks_dir_sibling_helper_passes) ... ok
+test_wrapper_hooks_dir_sibling_helper_rejects_stale_bytes (test_commit_gate.TestWrapperInstallation.test_wrapper_hooks_dir_sibling_helper_rejects_stale_bytes)
+The copied-pair layout must reject stale bytes after the wrapper ... ok
+test_wrapper_integrations_layout_passes (test_commit_gate.TestWrapperInstallation.test_wrapper_integrations_layout_passes) ... ok
+test_wrapper_integrations_layout_rejects_stale_bytes (test_commit_gate.TestWrapperInstallation.test_wrapper_integrations_layout_rejects_stale_bytes)
+A real git commit must be rejected when the wrapper runs from ... ok
+test_wrapper_source_is_executable (test_commit_gate.TestWrapperInstallation.test_wrapper_source_is_executable) ... ok
+test_wrapper_unsupported_layout_fails_clearly (test_commit_gate.TestWrapperInstallation.test_wrapper_unsupported_layout_fails_clearly) ... ok
+
+----------------------------------------------------------------------
+Ran 40 tests in 121.191s
+
+OK

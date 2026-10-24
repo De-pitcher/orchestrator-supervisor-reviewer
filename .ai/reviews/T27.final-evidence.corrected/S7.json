@@ -1,0 +1,32 @@
+{
+  "argv": [
+    "C:\\Python314\\python.exe",
+    "-m",
+    "unittest",
+    "-v",
+    "test_anchor_ext.TestAnchorExt.test_external_anchor_verification",
+    "test_fixture_capture.TestFixtureCaptureAndSeams.test_fixture_capture_and_seam_source",
+    "test_honest_reporting.TestHonestReporting.test_honest_reporting_and_heuristics"
+  ],
+  "cwd": "C:\\Users\\sam\\Documents\\sparkz\\orchestrator-supervisor-reviewer",
+  "elapsed_seconds": 8.604,
+  "exit": 0,
+  "id": "S7",
+  "kind": "supplementary-ids",
+  "log": ".ai/reviews/T27.final-evidence.corrected/S7.log",
+  "log_sha256": "f433b55e40e332c397bdec322f7d172cce945e6b85ce1ad8ccde7f7b5c742ae2",
+  "missing_ids": [],
+  "observed_count": 3,
+  "observed_ids": [
+    "test_anchor_ext.TestAnchorExt.test_external_anchor_verification",
+    "test_fixture_capture.TestFixtureCaptureAndSeams.test_fixture_capture_and_seam_source",
+    "test_honest_reporting.TestHonestReporting.test_honest_reporting_and_heuristics"
+  ],
+  "ok": true,
+  "pythonpath": "C:\\Users\\sam\\Documents\\sparkz\\orchestrator-supervisor-reviewer\\tests",
+  "scheduled_count": 3,
+  "tree_digest_after": "fb0f2d19eb7a76a54aa0296ca923d9465f17aaca4a162116edc476a62f2c0fd4",
+  "tree_digest_before": "fb0f2d19eb7a76a54aa0296ca923d9465f17aaca4a162116edc476a62f2c0fd4",
+  "tree_unchanged": true,
+  "unexpected_ids": []
+}

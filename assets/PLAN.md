@@ -16,6 +16,12 @@
   - AC: <observable behavior with inputs and expected outputs>
   - Check: auto
 
+## Seams
+<!-- Every cross-boundary interface declared with authoritative source. Required when requirements touch external interfaces. -->
+| seam id | consumer | provider | authoritative source (path or URL or schema file) | how it is checked |
+|---|---|---|---|---|
+| <seam-id> | <consumer-module> | <provider-service> | <path/to/source-schema-or-code> | <how-verified> |
+
 ## Interfaces and contracts
 <!-- Function signatures, API shapes, file formats, data schemas that tasks must agree on. Define BEFORE implementing. -->
 

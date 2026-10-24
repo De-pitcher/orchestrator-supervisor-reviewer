@@ -1,0 +1,23 @@
+# T27 batch S6
+argv: ["C:\\Python314\\python.exe", "-m", "unittest", "-v", "test_stop_hook.TestStopHookContract.test_stop_hook_contract", "test_stop_hook.TestStopHookContract.test_stop_hook_when_no_active_workflow"]
+cwd: C:\Users\sam\Documents\sparkz\orchestrator-supervisor-reviewer
+pythonpath: C:\Users\sam\Documents\sparkz\orchestrator-supervisor-reviewer\tests
+exit: 0
+elapsed_seconds: 0.967
+tree_digest_before: b17deff95afe64050a38b2d24c0181972d2831ab32f85cf1884d0cf5e5c696fd
+tree_digest_after: b17deff95afe64050a38b2d24c0181972d2831ab32f85cf1884d0cf5e5c696fd
+freeze_digest: b17deff95afe64050a38b2d24c0181972d2831ab32f85cf1884d0cf5e5c696fd
+scheduled_ids: 2
+observed_ids: 2
+
+===== STDOUT =====
+
+===== STDERR =====
+test_stop_hook_contract (test_stop_hook.TestStopHookContract.test_stop_hook_contract) ... ok
+test_stop_hook_when_no_active_workflow (test_stop_hook.TestStopHookContract.test_stop_hook_when_no_active_workflow) ... ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.779s
+
+OK
+

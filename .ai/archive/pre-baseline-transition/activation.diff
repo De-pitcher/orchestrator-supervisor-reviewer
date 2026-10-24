@@ -1,0 +1,201 @@
+# Review diff normalizes CRLF/LF; archived originals retain exact bytes.
+--- before/.ai/PLAN.md
++++ after/.ai/PLAN.md
+@@ -1,7 +1,7 @@
+ # Plan: close five reproduced evidence-integrity defects
+ 
+ ## Goal
+-Make current-code completion, command authorization, test evidence and commit checks reject the five bypasses reproduced in the repository analysis on 2026-10-23. Deliver six sequential, independently reviewed tasks (T22-T27). This packet is proposed for supervisor/human activation review; broader v0.3.2 release roadmap requirements (R0-R5b) are explicitly deferred.
++Make current-code completion, command authorization, test evidence and commit checks reject the five bypasses reproduced in the repository analysis on 2026-10-23. T22-T25 have independent technical acceptance under the historical epoch. The remaining active tasks are T26 and T27. This transition proposes a new human-approved starting baseline; it does not promote historical reviews into current requirement evidence. T27 must freshly verify and review R20-R25. The broader v0.3.2 release roadmap remains deferred.
+ 
+ ## Non-goals
+ - The broader v0.3.2 roadmap (deferred requirements R0, R1, R2, R4b, R4, R3, R5a, R5b), new evidence classes, password redesign, hook protocol redesign, new language parsers, packaging, global skill synchronization and release publication.
+@@ -58,13 +58,15 @@
+ 8. Persist new state through existing tool-managed writes and locks. Do not manually edit state or ledger. Do not claim atomic multi-file transactions merely because ledger append uses a lock. Tests exercise interrupted/missing records and require rejection.
+ 
+ ## Execution order
+-T22 logs -> T23 authorization -> T24 test identity -> T25 freshness -> T26 commit gate -> T27 integration/documentation. One builder and one task at a time. The supervisor reviews each task before the builder starts the next.
++Historical technical sequence completed: T22 logs -> T23 authorization -> T24 test identity -> T25 freshness. Their cards are retired into .ai/archive/pre-baseline-transition/; ledger/state history and snapshots remain intact. T25 closed explicitly as UNVERIFIED legacy technical history.
++
++Active sequence after human reapproval: T26 commit gate -> T27 integration/documentation. T26 starts from the newly approved baseline; T27 retains every requirement R20-R25 and must provide fresh current-epoch evidence. No retired task supplies current requirement credit. One builder and task at a time, with independent supervisor review before closure or advance. See .ai/TRANSITION.md.
+ 
+ ## Assumptions
+ - [x] Existing working-tree modifications are user work; activation requires an explicit ownership inventory and baseline, not a reset or stash.
+-- [x] This packet has been installed into .ai/ (.ai/PLAN.md, .ai/tasks/T22-T27), while superseded cards and plan are preserved in .ai/archive/deferred/ and ledger integrity remains intact.
++- [x] The active cards are T26 and T27. Original roadmap artifacts remain in .ai/archive/deferred/; pre-transition plan/cards are preserved in .ai/archive/pre-baseline-transition/. No ledger/state history was manually edited. Human reapproval is required before implementation resumes.
+ - [x] Security corrections intentionally reject some previously accepted commands/evidence; compatibility does not mean preserving these bypasses.
+ - [x] Local tests run sequentially in scoped batches, consistent with the parent AGENTS.md. No monolithic full-suite command is authorized by this packet.
+ 
+ ## Open questions
+-None required to review this proposal. Human approval is required before activation; this file does not grant it.
++Pending human approval of this reviewed transition and the new starting baseline. No agent may execute approve-plan. No additional scope or acceptance-criterion change is proposed.
+--- before/.ai/tasks/T22.md
++++ after/.ai/tasks/T22.md
+@@ -1,31 +0,0 @@
+-# T22: immutable command logs
+-id: T22
+-requirements: R20
+-depends_on:
+-allowed_files: scripts/osr.py, tests/test_run_logs.py
+-forbidden_files:
+-context_files: scripts/osr.py, docs/evidence-hardening/PLAN.md, docs/evidence-hardening/HANDOFF.md
+-verify: python -m unittest discover -s tests -p test_run_logs.py -v
+-
+-## Goal
+-Give every command run exclusive output storage so same-label commands cannot destroy evidence.
+-
+-## Inputs and context
+-Read save_log, run_recorded, cmd_verify, cmd_start and all save_log callers. Current save_log ignores its sequence hint and uses second-resolution timestamp plus label; cmd_verify rereads these paths later.
+-
+-## Constraints
+-- Implement PLAN interface 1 with stdlib and Python 3.8 compatibility.
+-- Keep complete output for failures and timeouts. Keep log references usable by existing consumers.
+-- Use exclusive creation and a unique ID, not sleeps or increased clock precision alone.
+-
+-## Do not
+-- Change command authorization, audit policy or test identity in this task.
+-- Remove old logs, rewrite ledger history, or mock away the exclusive-write behavior.
+-
+-## Example
+-Two writes for T1-task at the same frozen timestamp retain first output and second output in distinct files.
+-
+-## Definition of done
+-- Red tests reproduce overwrite; clean controls and same-label repeated/concurrent writes pass after the fix.
+-- Each returned digest matches that command's actual retained bytes, including failing output.
+-- Independent review checks downstream rereading of multiple command logs.
+--- before/.ai/tasks/T23.md
++++ after/.ai/tasks/T23.md
+@@ -1,32 +0,0 @@
+-# T23: exact command authorization
+-id: T23
+-requirements: R21
+-depends_on: T22
+-allowed_files: scripts/osr.py, tests/test_command_authorization.py
+-forbidden_files:
+-context_files: scripts/osr.py, docs/evidence-hardening/PLAN.md, docs/evidence-hardening/HANDOFF.md
+-verify: python -m unittest discover -s tests -p test_command_authorization.py -v
+-
+-## Goal
+-Make command confirmation authorize the command that actually ran, across every execution path.
+-
+-## Inputs and context
+-Read is_verify_cmd_confirmed, confirmed, validate_card, cmd_confirm, cmd_quick, cmd_fixture_capture, cmd_start and cmd_verify. Existing executable-name matching allows python arbitrary_script.py after confirming python -m unittest discover.
+-
+-## Constraints
+-- Apply PLAN interface 2. Trim outer whitespace only; do not infer shell equivalence.
+-- Test exact valid commands plus different scripts, modules, arguments, shell suffixes and no-confirmation behavior.
+-- Apply ledger integrity and weak/trivial rejection to quick; quick still cannot create task completion evidence.
+-- Existing fixture commands may become invalid. List exact affected fixtures for T27 migration; do not loosen the gate.
+-
+-## Do not
+-- Introduce command-prefix allowlists, implicit exemptions, new password mechanisms or shell parsers.
+-- Modify unrelated existing tests or change approved runtime config during implementation.
+-
+-## Example
+-Confirmed python -m unittest discover does not authorize python arbitrary_script.py or python -m unittest discover followed by another shell command.
+-
+-## Definition of done
+-- Red bypass and clean-control tests pass after repair for verify, conformance, capture and quick.
+-- Missing ledger confirmation rejects even if config says verified=true.
+-- Supervisor inspects every authorization caller and compatibility-mode diagnostic.
+--- before/.ai/tasks/T24.md
++++ after/.ai/tasks/T24.md
+@@ -1,31 +0,0 @@
+-# T24: current-run named test evidence
+-id: T24
+-requirements: R22
+-depends_on: T22, T23
+-allowed_files: scripts/osr.py, tests/test_test_evidence.py
+-forbidden_files:
+-context_files: scripts/osr.py, docs/evidence-hardening/PLAN.md, docs/evidence-hardening/HANDOFF.md, docs/vendor/runner_outputs/unittest_output.txt, docs/vendor/runner_outputs/pytest_output.txt
+-verify: python -m unittest discover -s tests -p test_test_evidence.py -v
+-
+-## Goal
+-Prevent stale reports and name collisions from proving a current required test ran.
+-
+-## Inputs and context
+-Read extract_passed_tests, gate_status, cmd_verify, run_recorded and the local captured runner outputs. Current extraction scans all XML files in .ai/logs and gates use substring matches. Missing negative tests currently warn while verify can succeed.
+-
+-## Constraints
+-- Apply PLAN interfaces 1 and 3; XML directory scanning is removed, not replaced by mtime guessing.
+-- Use real unittest subprocess output for end-to-end tests; captured pytest output covers its parser without adding pytest runtime dependency.
+-- Test a stale XML success with no current matching pass, failed-command output, a changed log digest, duplicate short names and parameterized identities.
+-
+-## Do not
+-- Add a universal runner parser, accept substring matches, or invent successful output inside the production path.
+-- Treat quick as evidence for a formal task or silently waive unsupported test identity formats.
+-
+-## Example
+-test_missing_user_extra does not satisfy test_missing_user; an old XML test_missing_user pass also does not satisfy it.
+-
+-## Definition of done
+-- Negative and acceptance names are checked against current successful run output only.
+-- Missing declared negative tests fail verify and done; valid qualified names and unambiguous short names pass.
+-- Existing negative-test behavior is inspected for intentional compatibility corrections.
+--- before/.ai/tasks/T25.md
++++ after/.ai/tasks/T25.md
+@@ -1,34 +0,0 @@
+-# T25: completion freshness
+-id: T25
+-requirements: R23
+-depends_on: T22, T23, T24
+-allowed_files: scripts/osr.py, tests/test_completion_freshness.py
+-forbidden_files:
+-context_files: scripts/osr.py, docs/evidence-hardening/PLAN.md, docs/evidence-hardening/HANDOFF.md
+-verify: python -m unittest discover -s tests -p test_completion_freshness.py -v
+-
+-## Goal
+-Make final audit prove the current accepted file set, including legitimate later tasks, instead of trusting historical done status.
+-
+-## Inputs and context
+-Read cmd_approve, cmd_start, cmd_verify, cmd_review, cmd_done, gate_status, requirement_rows, cmd_audit, walk_tree, fingerprint, Ledger and state persistence. Current audit does not recompute code freshness. .ai is ignored by tree scanning; bind cards explicitly.
+-
+-## Constraints
+-- Implement PLAN interfaces 4-6 and 8. Preserve old ledger bytes and reject incomplete new evidence records.
+-- Write the manifest schema and acceptance algorithm in the red-test handoff before implementing. Supervisor checks it against the fixed contracts.
+-- Test sequential overlapping tasks and pre-start drift; rejecting all later tasks is not a valid fix.
+-- Add audit --check as a read-only path using the same validation logic as reporting audit.
+-- Test that code changed during command execution requires a new stable verification run.
+-
+-## Do not
+-- Run test commands from audit, compare only historical per-task global fingerprints, or silently establish a new baseline after drift.
+-- Compare mutable context_files input_hash verbatim when that context intentionally contains edited implementation; use the defined separate card digest.
+-- Migrate legacy done records by claiming that an old review approved new bytes.
+-
+-## Example
+-Complete add(a,b)=a+b; change it to a-b; audit fails. A second task that legitimately verifies and reviews a new implementation may supersede the earlier bytes and audit passes.
+-
+-## Definition of done
+-- Modify/add/delete/config/card drift and task-ID reuse are rejected with actionable reasons.
+-- Clean completion, legitimate later overlapping task, ignored cache changes and read-only repeat audits have controls.
+-- Missing manifest or partial state/ledger write fails closed. Legacy chain verification still works.
+--- before/.ai/tasks/T26.md
++++ after/.ai/tasks/T26.md
+@@ -1,10 +1,10 @@
+ # T26: commit the audited artifact
+ id: T26
+ requirements: R24
+-depends_on: T25
++depends_on:
+ allowed_files: integrations/git/pre_commit.py, integrations/git/pre-commit, tests/test_commit_gate.py
+ forbidden_files:
+-context_files: scripts/osr.py, integrations/git/pre_commit.py, integrations/git/pre-commit, docs/evidence-hardening/PLAN.md, docs/evidence-hardening/HANDOFF.md
++context_files: .ai/PLAN.md, .ai/TRANSITION.md, scripts/osr.py, integrations/git/pre_commit.py, integrations/git/pre-commit, docs/evidence-hardening/PLAN.md, docs/evidence-hardening/HANDOFF.md
+ verify: python -m unittest discover -s tests -p test_commit_gate.py -v
+ 
+ ## Goal
+--- before/.ai/tasks/T27.md
++++ after/.ai/tasks/T27.md
+@@ -1,10 +1,10 @@
+ # T27: integration evidence and accurate documentation
+ id: T27
+ requirements: R20, R21, R22, R23, R24, R25
+-depends_on: T22, T23, T24, T25, T26
++depends_on: T26
+ allowed_files: tests/test_osr.py, tests/test_hardening_hypotheses.py, tests/test_anchor_ext.py, tests/test_fixture_capture.py, tests/test_honest_reporting.py, tests/test_tautological_ast.py, tests/test_zero_runner.py, evals/eval_suite.py, README.md, references/guarantees.md, integrations/README.md
+ forbidden_files:
+-context_files: scripts/osr.py, tests/test_osr.py, evals/eval_suite.py, docs/evidence-hardening/PLAN.md, docs/evidence-hardening/HANDOFF.md
++context_files: .ai/PLAN.md, .ai/TRANSITION.md, scripts/osr.py, tests/test_osr.py, evals/eval_suite.py, docs/evidence-hardening/PLAN.md, docs/evidence-hardening/HANDOFF.md
+ verify: python -m unittest discover -s tests -p test_run_logs.py -v
+ verify: python -m unittest discover -s tests -p test_command_authorization.py -v
+ verify: python -m unittest discover -s tests -p test_test_evidence.py -v

@@ -1,0 +1,3 @@
+R22: PASS - Current-run only: extract_passed_tests parses supplied command output and no longer scans .ai/logs XML; every recorded log is re-hashed against its own output_sha before parsing in cmd_verify, a mismatch exits 4, failed-command output is excluded, qualified names match exactly, ambiguous short names/zero matches fail verify and both gate types with an actionable message, and captured pytest parameter identities are preserved. Evidence: formal verify run e4744d5ce5c64c50b1ea6ec7c237de9d, 16/16 focused tests passing. @ scripts/osr.py:1449 "matches = sorted(i for i in qualified if terminal_test_name(i) == declared)"
+
+VERDICT: PASS

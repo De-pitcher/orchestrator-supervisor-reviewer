@@ -1,0 +1,76 @@
+{
+  "supplementary_count": 78,
+  "formal_count": 171,
+  "unique_count": 249,
+  "matches_pre_edit_inventory": true,
+  "duplicate_ids": [],
+  "checks": [
+    {
+      "batch": "S1",
+      "count": 12,
+      "sha256_verified": true
+    },
+    {
+      "batch": "S2",
+      "count": 12,
+      "sha256_verified": true
+    },
+    {
+      "batch": "S3",
+      "count": 12,
+      "sha256_verified": true
+    },
+    {
+      "batch": "S4",
+      "count": 10,
+      "sha256_verified": true
+    },
+    {
+      "batch": "S5",
+      "count": 13,
+      "sha256_verified": true
+    },
+    {
+      "batch": "S6",
+      "count": 2,
+      "sha256_verified": true
+    },
+    {
+      "batch": "S7",
+      "count": 3,
+      "sha256_verified": true
+    },
+    {
+      "batch": "S8",
+      "count": 14,
+      "sha256_verified": true
+    },
+    {
+      "formal_run": "4be69617ec434328861afb80fae44fcd",
+      "count": 19,
+      "sha256_verified": true
+    },
+    {
+      "formal_run": "0a3cd6770f9c47dbb3dff13d64b2bec9",
+      "count": 44,
+      "sha256_verified": true
+    },
+    {
+      "formal_run": "ba331f6e591247ddac308c365e734252",
+      "count": 33,
+      "sha256_verified": true
+    },
+    {
+      "formal_run": "6b8111d3e0cd41dc95ff4ca4910210f5",
+      "count": 36,
+      "sha256_verified": true
+    },
+    {
+      "formal_run": "54aa4184669a422a9aae2ce71c2d2e58",
+      "count": 39,
+      "sha256_verified": true
+    }
+  ],
+  "ledger_canonical_count": 148,
+  "note": "Supervisor log inspection, not a fresh rerun; multiline descriptions accounted for independently."
+}

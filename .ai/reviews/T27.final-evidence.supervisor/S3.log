@@ -1,0 +1,17 @@
+test_placeholder_and_hallucinated_import_are_caught (test_osr.OsrTests.test_placeholder_and_hallucinated_import_are_caught) ... ok
+test_plan_must_be_approved_and_stay_unchanged (test_osr.OsrTests.test_plan_must_be_approved_and_stay_unchanged) ... ok
+test_pluggable_checkers_in_config_block_on_failure (test_osr.OsrTests.test_pluggable_checkers_in_config_block_on_failure) ... ok
+test_quality_review_seam_citations_enforcement (test_osr.OsrTests.test_quality_review_seam_citations_enforcement) ... ok
+test_quick_path_rejects_scope_violation (test_osr.OsrTests.test_quick_path_rejects_scope_violation) ... ok
+test_quick_path_verifies_without_task_cards (test_osr.OsrTests.test_quick_path_verifies_without_task_cards) ... ok
+test_red_green_baseline_recorded_at_start (test_osr.OsrTests.test_red_green_baseline_recorded_at_start) ... ok
+test_review_on_stale_code_and_done_gate (test_osr.OsrTests.test_review_on_stale_code_and_done_gate) ... ok
+test_review_pack_bundles_diff_card_criteria_without_builder_logs (test_osr.OsrTests.test_review_pack_bundles_diff_card_criteria_without_builder_logs) ... ok
+test_review_pack_includes_adversarial_prompt_seams_and_authoritative_sources (test_osr.OsrTests.test_review_pack_includes_adversarial_prompt_seams_and_authoritative_sources) ... ok
+test_scope_violation_blocks_verify (test_osr.OsrTests.test_scope_violation_blocks_verify) ... ok
+test_seams_plan_check_passes_with_seams_table (test_osr.OsrTests.test_seams_plan_check_passes_with_seams_table) ... ok
+
+----------------------------------------------------------------------
+Ran 12 tests in 35.392s
+
+OK

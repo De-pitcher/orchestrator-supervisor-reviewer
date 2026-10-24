@@ -1,0 +1,53 @@
+{
+  "schema": "osr.t27.formal-logs.v1",
+  "verify_argv": [
+    "C:\\Python314\\python.exe",
+    "scripts/osr.py",
+    "verify",
+    "T27"
+  ],
+  "verify_exit": 0,
+  "verify_log": ".ai/reviews/T27.final-evidence/FORMAL.log",
+  "verify_log_sha256": "623baac477eb9987b41fa9768ae903e37ddfd57b815caa111641b00b4c8ea7b2",
+  "formal_scheduled_ids": 171,
+  "logs": [
+    {
+      "run_id": "4be69617ec434328861afb80fae44fcd",
+      "log": ".ai/logs/20261023-220131-0000-T27-task-4be69617ec434328861afb80fae44fcd.log",
+      "sha256": "8f6c7417c94b58a6a4664daa8abd8a137b9983cb40ec42a4593a80826f3d4cec",
+      "tests_ran": 19,
+      "unittest_ok": true
+    },
+    {
+      "run_id": "0a3cd6770f9c47dbb3dff13d64b2bec9",
+      "log": ".ai/logs/20261023-220135-0000-T27-task-0a3cd6770f9c47dbb3dff13d64b2bec9.log",
+      "sha256": "3dc614fc03d04a798b1c5d977c431a21d4604717197f4046fadf4c06e8ebe3cf",
+      "tests_ran": 44,
+      "unittest_ok": true
+    },
+    {
+      "run_id": "ba331f6e591247ddac308c365e734252",
+      "log": ".ai/logs/20261023-220146-0000-T27-task-ba331f6e591247ddac308c365e734252.log",
+      "sha256": "a86f9044b0241eb350ad292e9f29dc665616e0f02bfd73b60b0696bb2fe8b574",
+      "tests_ran": 33,
+      "unittest_ok": true
+    },
+    {
+      "run_id": "6b8111d3e0cd41dc95ff4ca4910210f5",
+      "log": ".ai/logs/20261023-220205-0000-T27-task-6b8111d3e0cd41dc95ff4ca4910210f5.log",
+      "sha256": "798d7226d16c298238d107da74b687a73d2d4df7c944b55dd1728ed3b43cd8f6",
+      "tests_ran": 36,
+      "unittest_ok": true
+    },
+    {
+      "run_id": "54aa4184669a422a9aae2ce71c2d2e58",
+      "log": ".ai/logs/20261023-220339-0000-T27-task-54aa4184669a422a9aae2ce71c2d2e58.log",
+      "sha256": "386ca04fd9204378a0877954e869d561bf6e16142657f115fd6af7bc6bd95a3e",
+      "tests_ran": 39,
+      "unittest_ok": true
+    }
+  ],
+  "sum_tests_ran": 171,
+  "count_matches_schedule": true,
+  "all_unittest_ok": true
+}

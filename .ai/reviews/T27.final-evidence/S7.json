@@ -1,0 +1,31 @@
+{
+  "id": "S7",
+  "kind": "supplementary-ids",
+  "scheduled_count": 3,
+  "observed_count": 3,
+  "observed_ids": [
+    "test_anchor_ext.TestAnchorExt.test_external_anchor_verification",
+    "test_fixture_capture.TestFixtureCaptureAndSeams.test_fixture_capture_and_seam_source",
+    "test_honest_reporting.TestHonestReporting.test_honest_reporting_and_heuristics"
+  ],
+  "missing_ids": [],
+  "argv": [
+    "C:\\Python314\\python.exe",
+    "-m",
+    "unittest",
+    "-v",
+    "test_anchor_ext.TestAnchorExt.test_external_anchor_verification",
+    "test_fixture_capture.TestFixtureCaptureAndSeams.test_fixture_capture_and_seam_source",
+    "test_honest_reporting.TestHonestReporting.test_honest_reporting_and_heuristics"
+  ],
+  "cwd": "C:\\Users\\sam\\Documents\\sparkz\\orchestrator-supervisor-reviewer",
+  "pythonpath": "C:\\Users\\sam\\Documents\\sparkz\\orchestrator-supervisor-reviewer\\tests",
+  "exit": 0,
+  "elapsed_seconds": 5.978,
+  "tree_digest_before": "b17deff95afe64050a38b2d24c0181972d2831ab32f85cf1884d0cf5e5c696fd",
+  "tree_digest_after": "b17deff95afe64050a38b2d24c0181972d2831ab32f85cf1884d0cf5e5c696fd",
+  "tree_unchanged": true,
+  "log": ".ai/reviews/T27.final-evidence/S7.log",
+  "log_sha256": "abf34786f4206d5e33f5b73e54cf113d45e83071efc63851c359fc60e43458fa",
+  "ok": true
+}

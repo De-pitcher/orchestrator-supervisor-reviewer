@@ -1,0 +1,1135 @@
+--- active/.ai/PLAN.md
++++ proposed/.ai/PLAN.md
+@@ -1,107 +1,204 @@
+-# Plan: osr v0.3.2 Hardening & Bypass Mitigation
++# Proposed plan: OSR v0.3.2 hardening
+ 
+ ## Goal
+-Close the verification bypasses identified during the v0.3.1 implementation audit across the MUST tier (Phases 0 through 5): repair the test baseline and sync global skill copy (R0), introduce explicit evidence classes in the ledger and audit (R1), implement official Antigravity Stop hook schema with loop guard and PreToolUse contract (R2), harden `osr quick` with command confirmation, chain verification, and test-config protections (R3), replace readable approval secrets with salted scrypt interactive terminal prompts failing closed without TTY (R4), empirically verify agent terminal interactive prompt behavior (R4b), and enforce test-run integrity with positive counts, new test execution verification, assertionless test scanning, and selection flag controls across verify and quick (R5a, R5b).
++Deliver current-input/attempt-bound evidence, bounded vendor-correct hooks, defensible approvals and honest heuristic/manual reporting. Prepared 2026-10-23 for human review only; active plan/cards/state remain unchanged. Decisions D1-D5 await approval.
+ 
+ ## Non-goals
+-- Parsing non-Python ASTs or language-specific schemas inside `scripts/osr.py` (standard-library only).
+-- Breaking backwards compatibility for existing cards without new optional fields.
+-- Pushing to or merging into `main` branch.
+-- Weakening existing test assertions or benchmark vectors (no test removed, assertion counts not reduced).
+-
+-## Task Order
+-1. R0: Repair test suite baseline & sync global skill copy
+-2. R1: Evidence classes in the ledger and audit
+-3. R2: Stop hook correctness and loop guard
+-4. R4b: Antigravity agent terminal interactive prompt assessment (manual signoff)
+-5. R4: Approval secret unreadable by agent (scrypt & terminal prompt)
+-6. R3: Harden quick path
+-7. R5a: Positive test counts and new test execution
+-8. R5b: Assertionless tests, selection flags, and extra tautologies
++- Rebuilding completed work, reusing archived IDs, manually rewriting ledger/state or implementing features in this session.
++- Inferring external isolation from prompts or shell regexes, semantic test quality from parsed output or historical evidence from relabeled reports.
++- Publishing, merging, tagging, pushing or syncing to an inferred installation target.
++- Weakening tests except the already human-approved, narrowly documented .ai/T0-DEVIATIONS.md D1-D4 exceptions, which remain binding.
++
++## Task order
++T0 -> T10 -> T17 -> T11 -> T12 -> T13 -> T14 -> T15 -> T16 -> T18 -> T19 -> T20 -> T21.
++Preserve T0 and T10-T16. T17-T21 have no current/archived cards or ledger ID ownership at preparation. Serial dependencies avoid competing CLI edits. This proposal changes no task state.
+ 
+ ## Requirements
+-- R0: Repair test suite baseline & sync global skill copy
+-  - AC: Fix the 3 failing tests in tests/test_osr.py by asserting version consistency across the project (osr.VERSION == pyproject version == eval_suite version == top CHANGELOG entry) and asserting benchmark results per required vector ID without hardcoded counts and without weakening (no test removed, assertion counts not reduced) [test_baseline_repair_green]
+-  - AC: Execute a confirmed global_verify command validating the full test suite is green with pass count recorded in ledger and status [test_full_suite_confirmed_global_verify]
+-  - AC: Implement scripts/sync_skill.py supporting --check --target <path> which exits 0 only when all destination file hashes match source, with a temp-dir test and no usernames or absolute paths in plan or config [test_sync_skill_script_and_hash_comparison]
+-  - Check: auto
+-
+-- R1: Evidence classes in the ledger and audit
+-  - AC: Ledger check entries record explicit evidence class with no default class (any entry type without a declared class fails tests and audit); re-justified classification: observed (direct execution outcome: verify exit code, quick exit code, seam conformance execution exit code, fixture capture exit code), heuristic (static approximation or unverified output: stdout-parsed positive test counts, scope lock check, placeholder pattern scan, reference integrity check, tautological assertion AST/regex scan, assertionless test scan, unapproved selection flag scan), or attested (human declarations: approve-plan human approval, signoff manual requirement signoff [retaining HUMAN-SIGNED status], waive check flag waiver, reset human task reset) [test_ledger_evidence_classes_recorded]
+-  - AC: Audit requirement traceability table displays evidence classes present per requirement, and VERIFIED status strictly requires >=1 observed entry (failing down to HEURISTIC-ONLY or ATTESTED-ONLY otherwise); legacy unclassified ledger entries produce UNCLASSIFIED-LEGACY with exit code 2 (no auto-classification) [test_audit_weakest_evidence_class]
+-  - AC: A task counts toward a requirement only if its done entry is newer than the current plan approval and the card's recorded input hash matches the current card; otherwise the task is STALE and audit exits non-zero. [test_audit_ignores_stale_task_state]
+-  - AC: osr ledger-verify verifies hash-chain integrity on legacy v0.3.1 ledger fixtures without errors [test_ledger_verify_v031_backwards_compatible]
+-  - AC: Benchmark vector V14 (with control run passing cleanly, literal, disguised, subtle and task-id-reuse variants failing on v0.3.1 and passing on v0.3.2; the task-id-reuse variant reuses an old done task id for a new card) catches unclassified or disguised heuristic evidence with gate id gate_evidence_classes [test_vector_v14_evidence_classes_gate]
+-  - Check: auto
+-
+-- R2: Stop hook correctness and loop guard
+-  - AC: Stop hook emits official schema (decision and reason) conforming to captured vendor contract docs/vendor/antigravity-hooks-2026-10-22.md, with stop-hook tests dynamically extracting examples from the vendor doc at test time as test fixtures [test_stop_hook_contract_schema]
+-  - AC: Stop hook inspects osr status --json and allows termination after N=3 consecutive identical blocks tracked in loop-guard counter file .ai/loop_guard.json, or when human action is pending; guard-allowed terminations are logged in the ledger and displayed in audit and status [test_stop_hook_loop_guard_n3]
+-  - AC: PreToolUse hook conforms to the schema in the vendor doc (docs/vendor/antigravity-hooks-2026-10-22.md), blocking protected path modifications and dangerous commands [test_pre_tool_use_schema_conformance]
+-  - AC: Benchmark vector V15 (with control run passing cleanly and literal, disguised, subtle variants failing on v0.3.1 and passing on v0.3.2) catches stop hook contract evasion with gate id gate_stop_hook_contract [test_vector_v15_stop_hook_gate]
+-  - Check: auto
+-
+-- R4b: Antigravity agent terminal interactive prompt assessment
+-  - AC: Attempt to run approve-plan from the real Antigravity agent terminal, document whether it can answer an interactive prompt or fails closed without TTY, apply the decision rule (if the agent terminal can answer prompts, document no protection in that harness, recommend separate OS user or CI-only approvals, and open a follow-up issue), and record manual human signoff [manual_agent_terminal_tty_signoff]
++- R0: Close the baseline repair without rebuilding completed work (T0)
++  - AC: Retain actual OsrTests.test_phase6_version_and_docs_integrity, test_phase6_benchmark_and_honest_reporting and test_adversarial_eval_suite_benchmarks_catch_rate; dynamic runtime/package/default benchmark/top changelog version equality and V1-V12 CAUGHT assertions remain under deviations D1.
++  - AC: Capture confirmed full-discovery/global verification output and observed exit. Historical count was 78 passing tests; meaningful new tests may increase it. Normalized parsed positive-count storage/status moves to R5a/T15, subject to D1 approval.
++  - AC: Keep explicit-target sync hash checks and opt-in pruning. Existing tests in tests/test_sync_skill.py: test_sync_skill_real_repo_sync_and_check_smoke, test_sync_skill_file_set_included_and_excluded, test_sync_skill_negative_missing_file, test_sync_skill_negative_differing_file, test_sync_skill_negative_extra_file_inside_synced_item, test_sync_skill_extra_outside_synced_items_not_flagged and test_sync_skill_sync_without_prune_keeps_extras. Preserve deviations D2-D4. Actual installation belongs to T21.
++  - AC: Explicitly own existing scripts/osr.py parse_plan regex change and add meaningful R4b/R5a positive, malformed and duplicate-ID behavioral coverage in tests/test_requirement_ids.py. Cite historical evidence honestly or reproduce old behavior in an isolated baseline; fabricate no red run.
++  - Check: auto
++
++- R1: Bind completion to current inputs and classify evidence (T10)
++  - AC: Define an explicit registry for event types and their evidence role. Distinguish administrative events from evidence-bearing events; no accidental default evidence class.
++  - AC: Classify direct execution outcomes as observed, static/output-derived approximations as heuristic, and human declarations as attested.
++  - AC: A verify event can contain observed execution results and heuristic parser/check results. Do not label every nested result observed merely because the command executed.
++  - AC: Record the task/card/context identity and approved plan/config identity needed to validate completion.
++  - AC: Require done evidence newer than the relevant current approval and matching current card/context inputs; validate current code and review freshness too.
++  - AC: Reject task-ID reuse, changed cards, stale reviews and stale conformance evidence as proof of current completion.
++  - AC: Keep legacy hash chains verifiable without rewriting entries. Apply the approved legacy-evidence policy in audit.
++  - AC: Retain `HUMAN-SIGNED` for manual requirements; observed evidence alone must not bypass manual signoff or other completion gates.
++  - AC: Fresh complete control passes.
++  - AC: Reused done ID with a different card is STALE.
++  - AC: Changed context, code, plan or configuration cannot inherit VERIFIED.
++  - AC: A new approval does not silently validate old done entries.
++  - AC: Heuristic-only/attested-only evidence does not become automatic VERIFIED.
++  - AC: Current legacy evidence is disclosed with the approved non-green outcome.
++  - AC: Legacy chain verification succeeds without rehashing historical entries.
++  - AC: Unknown evidence event types fail explicitly.
++  - Check: auto
++
++- R6: Authorize the command, not just its interpreter (T17)
++  - AC: Reject empty confirmation registries unless the explicitly approved no-command mode applies; no-command mode must not silently authorize arbitrary execution.
++  - AC: Use exact confirmed command identity as the initial policy. Avoid broad shell normalization that could change meaning.
++  - AC: Check ledger-backed successful confirmation, not only a mutable `verified` boolean.
++  - AC: Reject interpreter substitution, changed module/payload, added shell operators and unapproved argument variants.
++  - AC: Apply the same authorization semantics to task verification, conformance, fixture capture and the later quick implementation.
++  - AC: Adjust isolated test setup to confirm the actual command before approving its configuration. Do not weaken the authorization gate to keep fixtures convenient.
++  - AC: a confirmed unittest command does not authorize `python -c`, another module, a different executable, an appended shell command or an unconfirmed selection. An exact confirmed command passes. Changed command configuration invalidates its previous evidence.
++  - Check: auto
++
++- R2: Structured status and bounded contract-correct hooks (T11)
++  - AC: Make `status --json` emit one JSON object, no Markdown or incidental stdout.
++  - AC: Include machine-readable completion, approval validity, pending-human action, task states, next action and loop-guard information. Keep human-readable status available.
++  - AC: Keep a status query observational; do not append ledger events merely because status is read.
++  - AC: Make Stop consume structured status. Emit only fields appropriate to the documented Stop contract.
++  - AC: Allow stopping when human action is required. Never force an approval loop.
++  - AC: Persist an atomic loop guard keyed to meaningful workflow state, allowing stop after three consecutive identical blocks; genuine progress resets it.
++  - AC: Record guard-release events through an OSR-supported operation, not by editing ledger JSON in the hook.
++  - AC: Define malformed input/status failure behavior explicitly and visibly; no silent successful-completion claim.
++  - AC: Validate PreToolUse schema, protected paths, traversal, alternate tool arguments and scoped edits against the supported harness contract. State that shell-command regexes do not establish OS-level isolation.
++  - AC: documented contract fixtures, three identical blocks, progress reset, human-pending stop, no workflow, malformed state, concurrent counter writes, and protected-path cases. Include archived task states in a test so stale historical tasks do not cause endless continuation.
++  - Check: auto
++
++- R4b: Assess the actual agent terminal without granting real authority (T12)
++  - AC: Extend the diagnostic to exercise a harmless interactive challenge/getpass path with timeout/EOF behavior. Never request, print or store a real approval secret.
++  - AC: Run it in the real Antigravity agent terminal and a human-operated terminal. A Codex terminal run is not evidence about Antigravity.
++  - AC: Record harness identity, command, TTY state, whether input can be supplied, exit behavior and limitations.
++  - AC: If an approval-command rehearsal is required, the human supervises an isolated disposable workflow with a dummy secret; do not execute supervisory commands against the live repository as the agent.
++  - AC: Apply the decision rule: if the agent can answer prompts, document that prompting does not separate human authority; require external access controls for that guarantee.
++  - AC: Prepare a follow-up issue draft if needed; publishing it is a separate action.
++  - AC: empirical report and real human signoff. If the harness is unavailable, report BLOCKED/UNVERIFIED honestly and complete independent preparation only. Do not simulate the missing observation.
+   - Check: manual
+   - Script: scripts/test_agent_tty.py
+ 
+-- R4: Approval secret unreadable by agent (scrypt & terminal prompt)
+-  - AC: Define sensitive flags (selection flags, custom-parser exemption, --allow-config); any waiver or bypass of sensitive flags requires human authorization with secret verification recorded in the ledger [test_sensitive_flags_governance]
+-  - AC: Implement set-secret command prompting for password with confirmation, generating salted hashlib.scrypt hash, and writing an attested ledger entry containing the secret hash fingerprint; first set happens before any agent session; any subsequent set-secret requires verifying the old secret; audit flags any set-secret performed after plan approval [test_cmd_set_secret_rotation_and_audit_flag]
+-  - AC: Every human-only command (approve-plan, unblock, reset, signoff, waive for sensitive flags) prompts for the secret and verifies the computed hash matches the last fingerprint recorded in the ledger [test_human_commands_verify_secret_fingerprint]
+-  - AC: Approval commands fail closed with explicit error when no controlling TTY/console is present [test_approval_fail_closed_no_tty]
+-  - AC: Refuse legacy unsalted SHA-256 secret in config until set-secret command is rerun [test_approval_refuse_legacy_unsalted]
+-  - AC: Remove --secret CLI flag and OSR_APPROVAL_SECRET environment variable from approval commands to prevent process-table or environment snooping [test_approval_secret_scrypt_terminal]
+-  - AC: Audit records unprotected approvals with prominent warning [test_audit_records_unprotected_approvals]
+-  - AC: PreToolUse deny rules prevent agent tool calls from inspecting or modifying approval secret files [test_pre_tool_deny_secret_access]
+-  - AC: Benchmark vector V17 (with control run passing cleanly and literal, disguised, subtle variants failing on v0.3.1 and passing on v0.3.2) catches approval secret disclosure/bypass with gate id gate_approval_scrypt_terminal [test_vector_v17_approval_secret_gate]
+-  - Check: auto
+-
+-- R3: Harden quick path
+-  - AC: Define minimal test-config file list (pytest.ini, setup.cfg, tox.ini, pyproject.toml, jest.config.js, jest.config.ts, jest.config.json, vitest.config.js, vitest.config.ts, package.json [scripts block only], .eslintrc.js, .eslintrc.json, tsconfig.json) [test_test_config_file_list_defined]
+-  - AC: Test-config drift check runs in both osr verify and osr quick against fingerprints recorded at confirm-commands (not uncommitted changes) and refuses execution unless bypassed by --allow-config (which requires the approval secret and records an attested ledger entry) [test_config_drift_check_verify_and_quick]
+-  - AC: osr quick requires confirmed verify commands matching .ai/config.json and rejects unconfirmed commands [test_quick_requires_confirmed_verify]
+-  - AC: osr quick rejects trivial commands and weak verify patterns (token existence checks) [test_quick_rejects_weak_commands]
+-  - AC: osr quick enforces ledger hash-chain integrity verification (require_chain=True) [test_quick_enforces_ledger_chain]
+-  - AC: osr quick refuses execution during in-progress task attempts [test_quick_refuses_during_in_progress_tasks]
+-  - AC: osr quick records skipped verification gates explicitly in ledger entry and stdout output [test_quick_records_skipped_gates]
+-  - AC: Benchmark vector V16 (with control run passing cleanly and literal, disguised, subtle variants failing on v0.3.1 and passing on v0.3.2) catches unconfirmed quick command and broken ledger chain with gate id gate_quick_confirmation_and_chain [test_vector_v16_quick_path_gate]
+-  - Check: auto
+-
+-- R5a: Positive test counts and new test execution
+-  - AC: Record base commit hash at osr start; newly added or modified test functions are determined via git diff against base_commit (falling back to stored copies saved at osr start, else marking UNVERIFIED) [test_record_base_commit_and_diff]
+-  - AC: Parse positive test execution counts from runner output captured via fixture-capture from real test runs; unittest and pytest are verified against captured seam sources; jest and vitest are experimental notes with no declared seam (producing UNVERIFIED unless exempted by a human-approved osr waive for sensitive flags recorded in the ledger) [test_runner_positive_counts_in_scope]
+-  - AC: Verify newly added or modified test function names appear in runner output; runners are invoked with standard environment variables LC_ALL=C and PYTHONIOENCODING=utf-8, preferring locale-independent parsers; non-English or unparseable runner output produces UNVERIFIED status [test_new_tests_executed_and_locale_handling]
+-  - AC: When test runner output contains no individual test names (non-verbose runner execution), verify command flags missing test names and requires verbose flag or marks UNVERIFIED with actionable warning [test_runner_non_verbose_warning]
+-  - AC: Benchmark vector V18 (with control run passing cleanly and literal, disguised, subtle variants failing on v0.3.1 and passing on v0.3.2) catches zero-test and unparsed runner outputs with gate id gate_runner_positive_counts [test_vector_v18_runner_counts_gate]
+-  - Check: auto
+-
+-- R5b: Assertionless tests, selection flags, and extra tautologies
+-  - AC: Check scans test diffs and flags assertionless test functions via AST (Python) and regex (JS/TS), tested against literal (test_assertionless_literal), disguised (test_assertionless_disguised), and subtle (test_assertionless_subtle) evasion patterns [test_assertionless_detection]
+-  - AC: Check rejects unapproved test runner selection flags in verify commands (-k, -m, -t, --testNamePattern, test path filters) unless exempted by a human-approved osr waive for sensitive flags recorded in the ledger (not a task card field), tested with literal (test_selection_flags_literal), disguised (test_selection_flags_disguised), and subtle (test_selection_flags_subtle) variants [test_selection_flags_detection]
+-  - AC: Check inspects extended tautological assertions (assert True, self == self, expect(x).toBe(x), Boolean literals, tautological boolean expressions), tested with literal (test_tautology_literal), disguised (test_tautology_disguised), and subtle (test_tautology_subtle) variants [test_tautology_extended_detection]
+-  - AC: Integrity checks (assertionless tests, selection flags, tautologies) are wired into both osr verify and osr quick [test_integrity_checks_wired_verify_and_quick]
+-  - AC: Benchmark vector V19 (with control run passing cleanly and literal, disguised, subtle variants failing on v0.3.1 and passing on v0.3.2) catches assertionless tests and evasion variants with gate id gate_assertionless_and_tautology_scan [test_vector_v19_assertionless_gate]
++- R4: Protected approvals, migration and testable boundaries (T13)
++  - AC: Implement salted `hashlib.scrypt` verification with explicit stored parameters and constant-time comparison.
++  - AC: Implement `set-secret`, confirmation, old-secret verification for rotation, and fingerprint linkage to ledger evidence.
++  - AC: Remove plaintext `--secret`/environment input from protected approval paths; never log the entered secret.
++  - AC: Fail protected operations closed without a controlling terminal; handle EOF and interrupt safely.
++  - AC: Refuse legacy unsalted configuration for protected operations until the human migrates it.
++  - AC: Cover approve-plan, unblock, reset, signoff and sensitive waivers consistently.
++  - AC: Record unprotected approvals under the policy approved in planning reconciliation.
++  - AC: Bind sensitive waivers to task/attempt/check or approved configuration identity so they do not become permanent blanket exemptions.
++  - AC: Update hook protections for supported secret-access surfaces while documenting their limits.
++  - AC: correct/wrong secret, unique salts, rotation, fingerprint mismatch, no TTY, EOF, interrupt, legacy migration, post-approval setup warning, sensitive flags and no secret leakage in logs/errors. V17 adds evasions plus clean controls.
++  - AC: inject/mock input only inside unit tests or use an isolated PTY fixture with dummy secrets. Do not add a production environment variable or debug flag that bypasses authentication for tests. Preserve meaningful CLI integration coverage.
++  - Check: auto
++
++- R3: Quick mode and test-configuration integrity (T14)
++  - AC: Make quick verify the chain and authorize its command using T17.
++  - AC: Reject quick during an active formal task.
++  - AC: Share the applicable static-check and execution pipeline; do not duplicate a weaker quick implementation.
++  - AC: Define a reliable quick baseline: tracked modifications, staged/unstaged changes, untracked files, deletions and renames. Define non-Git behavior explicitly; fail or mark unsupported evidence UNVERIFIED rather than assuming a nonexistent baseline.
++  - AC: Fingerprint the approved test-config set at confirmation: pytest.ini, setup.cfg, tox.ini, pyproject.toml, Jest/Vitest configurations, package.json scripts, ESLint configs and tsconfig.json.
++  - AC: Detect creation, deletion and modification relative to that fingerprint in verify and quick. For package.json compare the declared scripts subset deterministically.
++  - AC: A config bypass requires protected human authorization and records its exact scope. Decide whether it grants one use or updates an approved fingerprint; it must not silently authorize future drift.
++  - AC: Report every intentionally skipped formal gate in stdout and ledger. Quick does not finish a task or satisfy spec/quality review.
++  - AC: valid control, corrupted chain, unconfirmed/weak command, active task, config add/delete/change, allowed config decision, scope violations, Git path edge cases, and explicit skipped-gate reporting. V16 exercises both chain and authorization failures.
++  - Check: auto
++
++- R5a: Runner counts and evidence from this exact attempt (T15)
++  - AC: Record base commit when available and snapshot copies/hashes needed for dirty and non-Git starting trees. New/changed tests must be measured against the task-start state, not just HEAD when the start was already dirty.
++  - AC: Capture real unittest/pytest output with provenance and include passing, failing, zero-test, skipped-only and non-verbose cases. Keep pytest a test-environment dependency, not a runtime dependency of osr.py.
++  - AC: Record parsed executed/pass/fail/skip counts as heuristic evidence alongside the observed exit outcome; store the count in confirmation records and expose it in status.
++  - AC: Require positive executed-test evidence for test verification. Do not demand test counts from legitimate compiler/linter/conformance commands: declare and enforce command roles.
++  - AC: Detect newly added/modified test identities and require execution evidence for them. Preserve fully qualified names; remove substring matches that confuse similarly named tests.
++  - AC: Scope XML/JSON result artifacts to the current command and attempt with captured identity/hash. Never scan unrelated old `.ai/logs/*.xml` as current evidence.
++  - AC: Use `LC_ALL=C` and `PYTHONIOENCODING=utf-8` where applicable. Unknown/localized output gets an actionable UNVERIFIED outcome, not invented counts.
++  - AC: Treat non-verbose test runs consistently: require an approved verbose equivalent or mark identity coverage UNVERIFIED.
++  - AC: Keep Jest/Vitest experimental until their evidence has real contract fixtures; do not fabricate support.
++  - AC: Repair command-level baseline keys (`task_0` versus `task`) if retained for red/green summaries. Do not describe command-level transitions as proof that each negative test failed first.
++  - AC: positive/zero/skipped-only counts; unparseable output; changed tests omitted; name collision; stale XML with empty current output; altered artifact hash; non-Git fallback; dirty starting tree; compiler command without test counts; and correctly scoped current artifacts. V18 includes stale-output evasion.
++  - Check: auto
++
++- R5b: Test-integrity checks and negative-test obligations (T16)
++  - AC: Add Python AST and JS/TS heuristic checks for assertionless new/modified tests and extended tautologies.
++  - AC: Handle legitimate assertion mechanisms such as assertRaises/pytest.raises and helper assertions conservatively. Unknown helper semantics are heuristic uncertainty, not proof of vacuity.
++  - AC: Detect unapproved selection flags and path filters; distinguish selection from options such as unittest's unrelated `-t` top-level-directory flag. Use runner-specific argument rules.
++  - AC: Wire the same checks into formal verify and quick.
++  - AC: Enforce the approved per-seam negative-test obligation, including an absent field. Define an explicit seam-to-test mapping if the flat list cannot establish coverage; document compatibility handling rather than silently guessing associations.
++  - AC: Require exact current-attempt execution of named negative tests using T15. Missing mandatory negative tests must not yield a passing verify followed only by a surprise at done.
++  - AC: Update tests that intentionally asserted a bypass succeeds into regression tests that assert it is rejected; preserve the attack scenario and clean control. This is a behavior correction, not permission to remove coverage.
++  - AC: literal/disguised/subtle vacuity, valid helper/exception cases, selection exemptions with genuine authorization, similarly named tests, omitted negative_tests, and equivalent enforcement in verify/quick. V19 remains explicitly heuristic, not a mutation-testing guarantee.
++  - Check: auto
++
++- R7: Review only the task's actual changes (T18)
++  - AC: Build the primary review diff from the task-start baseline and allowed files.
++  - AC: Include staged, unstaged, added, deleted, renamed and applicable non-Git changes accurately.
++  - AC: List out-of-scope changed paths separately without presenting their contents as task implementation.
++  - AC: Preserve acceptance criteria, card, declared seams, authoritative source excerpts and adversarial directive.
++  - AC: Exclude unrelated governance diffs, previous review reasoning and builder notes. If any input is user-authored text, treat it as review data rather than privileged instructions.
++  - AC: two tasks' unrelated changes are separated; pre-existing dirty content is not mislabeled as new task work; required untracked/staged changes appear; upstream citations remain inspectable; deleted files are represented; unrelated notes do not leak into the primary diff.
++  - Check: auto
++
++- R8: Integrate and prove the new gates against real baselines (T19)
++  - AC: Finish V14-V19, preserving V1-V12. V13 remains reserved unless deliberately assigned.
++  - AC: Each new vector has a passing clean control and explicit expected gate ID. Unexpected exceptions, missing dependencies and invalid setup are ERROR, not CAUGHT.
++  - AC: Add a genuine baseline runner that targets a pinned v0.3.1 commit in an isolated checkout/copy. Do not use the `version="0.3.0"` relabel path as historical evidence.
++  - AC: Keep source revision, runtime version, platform, command and result in reports. Current uncommitted tree identity must be distinguishable from its HEAD commit.
++  - AC: Run equivalent attack/control scenarios against baseline and current code. Unsupported baseline commands are setup differences, not automatically successful defenses or attacks.
++  - AC: Test the full lifecycle and changed-plan/task reuse, manual pending, protected approvals, hook human-pending exits, quick integrity and stale artifacts.
++  - AC: Reconcile old tests with new exact confirmation and approval contracts using real isolated setup, never production bypass switches.
++  - AC: Verify installed integration behavior in a disposable workspace. The existence of hook source files does not demonstrate installation.
++  - AC: full suite green; controls pass; intended baseline weaknesses reproduced; new gates catch their attacks; known misses and errors reported separately; no unsupported cross-platform claims. Run remote CI only when available/authorized, and retain the actual run evidence.
++  - Check: auto
++
++- R9: Documentation, metadata and release candidate (T20)
++  - AC: Bump version to 0.3.2 only after behavior is implemented and integration checks pass.
++  - AC: Correct quick-mode descriptions, approval setup, hook schema, test-count claims and obsolete V11/V12 backlog text.
++  - AC: Replace absolute promises such as "no silent failure" with scoped claims tied to supported checks and trust boundaries.
++  - AC: Document observed/heuristic/attested evidence, legacy handling, exact command confirmation, unsupported runners and migration behavior.
++  - AC: State that test-output parsing does not establish semantic test quality or resist arbitrary forged runner output.
++  - AC: Update optional seam/fixture/kind/negative-test template guidance.
++  - AC: Resolve pre-commit documentation: current plan-check proves plan structure, not unchanged human approval. Either accurately document this limitation or implement approval enforcement under a separately scoped/tested requirement.
++  - AC: Describe the actual CI matrix separately from verified run results. No invented CI URL or release evidence.
++  - AC: Prepare release notes and a reproducible checklist. No push, tag, merge or publication is implied by this handoff.
++  - AC: all version sources agree; docs match tested behavior; links and documented commands resolve; full verification passes after edits; unsupported guarantees are removed.
++  - Check: auto
++
++- R10: Synchronize the installed skill after the final source changes (T21)
++  - AC: First run `sync_skill.py --check --target <explicit-target>`.
++  - AC: Sync only to the explicitly authorized target; do not infer permission for another account or install location.
++  - AC: Do not prune by default. Inspect and obtain the necessary scope authorization before deleting extras.
++  - AC: Re-run the same hash check after sync and record the result.
++  - AC: Smoke-test the installed CLI from a disposable project, not the live development workflow.
++  - AC: Decide/document which tests are repository-only: the sync set excludes pyproject.toml and docs/vendor, while some tests depend on them. Do not falsely advertise the installed directory as a complete source checkout; do not broaden the sync set without revisiting the recorded decision.
++  - AC: the declared shipped set matches hashes; installed CLI reports 0.3.2; disposable smoke test passes; intentionally excluded assets and any retained extras are disclosed. Do not claim the whole destination is identical when only a declared subset is checked.
+   - Check: auto
+ 
+ ## Seams
+ | seam id | consumer | provider | authoritative source | how it is checked |
+ |---|---|---|---|---|
+-| antigravity_hook | integrations/antigravity/stop_hook.py | Antigravity Runtime | docs/vendor/antigravity-hooks-2026-10-22.md | contract-test: python -m unittest tests/test_stop_hook.py |
+-| runner_output_unittest | scripts/osr.py | unittest Runner | docs/vendor/runner_outputs/unittest_output.txt | parser-conformance-test: python -m unittest tests/test_runner_parsers.py |
+-| runner_output_pytest | scripts/osr.py | pytest Runner | docs/vendor/runner_outputs/pytest_output.txt | parser-conformance-test: python -m unittest tests/test_runner_parsers.py |
+-
+-## Assumptions
+-- [x] Python 3.8+ standard library remains the sole runtime dependency for `scripts/osr.py`.
+-- [x] All new fields and flags are optional; existing projects without them behave as in v0.3.1.
+-- [x] Antigravity Stop and PreToolUse hook specifications and examples are anchored to captured vendor documentation `docs/vendor/antigravity-hooks-2026-10-22.md`.
+-- [x] Loop-guard counter is persisted across hook invocations in `.ai/loop_guard.json`.
+-- [x] Vector suite does not contain V13; V13 is reserved and new vectors continue sequentially as V14 through V19.
+-- [x] Benchmark vectors V14 through V19 require control runs (cheat removed passes) and must fail on v0.3.1 baseline and pass on v0.3.2.
+-- [x] Jest and Vitest runners are experimental notes with no declared seam; unittest and pytest are the sole active runner output seams.
++| antigravity_hook | integrations/antigravity/stop_hook.py and pre_tool.py | Antigravity Runtime | docs/vendor/antigravity-hooks-2026-10-22.md | T11 source-linked parseable contract cases in full discovery |
++| runner_output_unittest | scripts/osr.py | unittest runner | docs/vendor/runner_outputs/unittest_output.txt | T15 provenance-backed real captures and full-discovery conformance |
++| runner_output_pytest | scripts/osr.py | pytest runner | docs/vendor/runner_outputs/pytest_output.txt | T15 provenance-backed real captures and full-discovery conformance |
++
++## Interfaces
++- Evidence registry distinguishes administrative and evidence-bearing events; observed execution never promotes nested heuristic results. Current identity binds approved plan/config, card/context, code, reviews, command and attempt. Manual requirements retain HUMAN-SIGNED obligations.
++- Exact confirmed command strings are the initial authorization identity (D4). Declare command roles: test execution needs positive counts; legitimate compiler/linter/conformance execution does not require test counts. Empty or no-command mode authorizes no arbitrary command. Narrow development variants require separate confirmation before formal use.
++- Status --json emits exactly one object for completion, approval validity, pending-human action, current task states, next action and guard state. Status queries append no events. T11 specifies a versioned field schema and explicit error object before implementation. Stop blocks using decision="continue" from captured vendor docs, never changelog "block". Non-continuation permits stopping; malformed state emits a visible diagnostic without claiming completion. Guard-release events use a supported OSR operation, not hook-written ledger bytes.
++- Before T13 migrate isolated approval fixtures: inventory tests/test_osr.py Project, evals/eval_suite.py EvalProject and affected test setup helpers. Protected tests use test-only mocked input or isolated PTYs with dummy secrets. Preserve real CLI integration coverage. Unprotected fixtures explicitly declare compatibility mode and assert the approved D3 warnings/exit. Migrate legacy protected fixtures through isolated setup; no production bypass flags/environment inputs. Real initial setup, migration and rotation remain human operations.
++- Task-start identity includes dirty/untracked snapshots and base commit when available; review packs and changed-test checks consume it. Result artifacts carry current command/attempt identity and content hash; unrelated old XML is not execution evidence.
++- Per-seam negative tests map explicitly in T11/T15; T16 enforces absent obligations and exact current-attempt execution. Any new syntax requires a reviewed card change, not guessed associations.
++- Confirmation, approval, evidence freshness and quick security corrections intentionally change permissive v0.3.1 behavior. New optional seam/fixture/kind fields retain compatibility only where safe; there is no blanket identical-legacy-behavior promise.
++
++## Review and verification policy
++One builder session per packet; fresh spec/quality reviewer sessions inspect actual files, tests, source contracts and captured outputs. Requested builder is GPT-6.1-sol. A reviewer using the same model is labeled honestly as the same model. Current require_distinct_reviewer=false permits fresh same-model review; if that policy changes, use a real different reviewer or obtain an explicit plan decision. Do not spawn agents just to execute this plan.
++ROADMAP.md requires human approval of focused failing tests before implementation. Batch attack/control red-test review per packet (D5); T0 already-fixed tests cite honest historical evidence or real isolated baseline reproduction. No fabricated red run.
++Each card uses existing confirmed python -m unittest discover -s tests -v for formal verification, retaining configured global_verify. Conformance also uses discovery to avoid unconfirmed variants. Narrow commands are development checks. Capture complete output/exit/count/log path; reuse unchanged benchmark results within one process. Proposed new test names do not yet exist and are not claims of coverage.
++Until T18 reviewers identify task files independently because current review-pack diffs may be broad. Each task still needs actual verification and both reviews; no self-certified independent review. Handoffs remain in transcripts unless their path is explicitly allowed.
++
++## Decisions pending human review
++D1: Move normalized positive-count storage/status from R0/T0 to R5a/T15; T0 captures full output and observed exit without an unbuilt parser. Explicitly assign the existing requirement parser edit and new behavioral coverage to T0.
++D2: Preserve old ledger bytes. Legacy evidence used for a current requirement is UNCLASSIFIED-LEGACY and audit exit 2; unrelated historical entries remain disclosed without permanently preventing a new fully evidenced workflow from passing. New approval does not validate stale done/review evidence.
++D3: Retain documented unprotected compatibility mode with prominent warnings. Recommended release policy: current unprotected approval makes audit exit 2 rather than 0. Protected projects require the new secret mechanism. Tests must encode the actual approved choice.
++D4: Require exact confirmed command strings initially, with explicitly approved variants as separate entries. Never authorize an entire interpreter or shell.
++D5: Keep test-first human approval; batch focused failing-test review per packet. Fresh same-model review is permitted under current config and honestly labeled; no invented reviewer identity.
+ 
+ ## Open questions
+-- OQ1 (OPEN - pending R4b manual signoff): Does the Antigravity agent terminal allow interactive getpass input, or will approve-plan fail closed when run non-interactively? (Evaluated via scripts/test_agent_tty.py and documented in .ai/TTY_ANALYSIS.md; kept open until human signoff in R4b).
+-- [x] OQ2: How should test runners not installed locally (e.g. Jest/Vitest) be validated in CI without adding heavyweight npm dependencies? (Resolved: unittest and pytest are the sole in-scope seams verified via fixture-capture from real runs; jest and vitest are experimental notes with no seam and produce UNVERIFIED unless waived).
+-- [x] OQ3: How are localized test runner outputs handled if a non-English OS environment runs tests? (Resolved: Test runners are invoked with standard environment variables LC_ALL=C and PYTHONIOENCODING=utf-8, and regex parsers prefer locale-independent patterns; non-English output is marked UNVERIFIED).
++OQ1: Actual Antigravity prompt authority remains UNVERIFIED until T12 human signoff. A prompt does not establish separation from an agent able to answer it.
++OQ2: T21 installation target is unspecified. Its card must receive an explicit operator target and approved allowed_files update before destination writes; no installation is authorized here.
++OQ3: T19 must resolve a real pinned v0.3.1 source revision with provenance; version relabeling is not a historical baseline. Missing harness/dependencies/remote CI remain disclosed limitations.
+--- active/.ai/tasks/T0.md
++++ proposed/.ai/tasks/T0.md
+@@ -1,30 +1,57 @@
+-# T0: Repair test suite baseline & sync global skill copy
++# T0: Close the baseline repair without rebuilding completed work
+ id: T0
+ requirements: R0
+-depends_on:
+-allowed_files: tests/test_osr.py, scripts/sync_skill.py, tests/test_sync_skill.py, pyproject.toml
+-forbidden_files: 
+-context_files: .ai/PLAN.md, pyproject.toml, CHANGELOG.md, evals/eval_suite.py
+-verify: python -m unittest tests.test_osr tests.test_sync_skill -v
++depends_on: 
++allowed_files: tests/test_osr.py, scripts/sync_skill.py, tests/test_sync_skill.py, pyproject.toml, scripts/osr.py, tests/test_requirement_ids.py
++forbidden_files: .ai/ledger.jsonl, .ai/state.json, .ai/STATE.md, .ai/AUDIT.md
++context_files: .ai/PLAN.md, .ai/T0-DEVIATIONS.md, pyproject.toml, CHANGELOG.md
++verify: python -m unittest discover -s tests -v
+ 
+ ## Goal
+-Repair baseline test failures in tests/test_osr.py (dynamic version consistency check across pyproject.toml, eval_suite.py, CHANGELOG.md, and osr.VERSION; per-vector benchmark assertions without hardcoded counts or test weakening) and implement scripts/sync_skill.py with hash comparison.
++Close the baseline repair without rebuilding completed work. Implement this bounded packet only after actual human plan approval and predecessor closure. This proposal changes no task state.
++
++## Inputs and context
++scripts/osr.py: parse_plan; scripts/sync_skill.py file-set constants and main; tests/test_osr.py: OsrTests.test_phase6_version_and_docs_integrity, test_phase6_benchmark_and_honest_reporting, test_adversarial_eval_suite_benchmarks_catch_rate; tests/test_sync_skill.py: test_sync_skill_real_repo_sync_and_check_smoke, test_sync_skill_file_set_included_and_excluded, test_sync_skill_negative_missing_file, test_sync_skill_negative_differing_file, test_sync_skill_negative_extra_file_inside_synced_item, test_sync_skill_extra_outside_synced_items_not_flagged, test_sync_skill_sync_without_prune_keeps_extras.
++Locate definitions with rg -n and read bounded ranges, relevant callers and tests in the named files before editing. These required source locations supplement context_files. The whole CLI exceeds the context budget; do not dump it or use summaries in place of the actual code. Read SKILL.md and applicable rules once per session.
++
++Read: current T0, deviations, version-consistency tests, sync implementation and tests, requirement parser if assigned here.
++
++
++## Work
++
++- Retain dynamic version consistency and V1-V12 assertions.
++- Preserve the approved sync file set and explicit target requirement.
++- Preserve opt-in pruning; default sync must not delete extras.
++- Align acceptance-test names and establish actual captured full-suite evidence.
++- Identify and preserve unrelated pre-existing changes.
++
++## Acceptance cases
++
++- Existing 78 tests remain passing unless new meaningful tests increase the count.
++- Version equality holds across runtime, package metadata, default benchmark report and top changelog.
++- Missing/different/extra files inside the sync set are detected; extras outside it follow the existing approved policy.
++- Any parser change has positive and malformed/duplicate-ID coverage.
++- No fabricated red run for already-fixed tests. Cite historical evidence honestly or demonstrate the old behavior in an isolated baseline copy.
++
++Focused checks: `python -m unittest tests.test_sync_skill -v`, relevant existing version/parser tests. Finish with formal OSR verification and reviews.
++
++Explicitly own the already-present parse_plan requirement-ID regex edit. Add tests/test_requirement_ids.py behavioral tests test_requirement_ids_accept_r4b_r5a, test_requirement_ids_reject_malformed and test_requirement_ids_reject_duplicates (planned names, not existing evidence). Move normalized positive-count storage to R5a/T15; T0 captures actual full-suite output and exit without an unbuilt parser. Preserve .ai/T0-DEVIATIONS.md D1-D4 exceptions.
+ 
+ ## Constraints
+-- Python 3.8+ standard library only.
+-- No test methods removed; assertion counts not reduced (no weakening).
+-- Version consistency asserts osr.VERSION == pyproject version == eval_suite version == top CHANGELOG entry.
+-- Benchmark test asserts per required vector ID (v["status"] == "CAUGHT"), not hardcoded count 10.
+-- scripts/sync_skill.py --check --target <path> exits 0 only when all destination file hashes match source.
+-- No usernames or absolute paths in plan or config.
++- Keep scripts/osr.py stdlib-only and Python 3.8-compatible. Preserve unrelated pre-existing work.
++- Obtain human approval of focused failing tests before new gate implementation; no fabricated historical red run.
++- Formal verification uses the exact confirmed full-discovery command above plus configured global verification. Focused checks mentioned in this packet are development checks; never silently remove global verification to avoid a repeated run.
++- Existing fixture edits are limited to this packet contract migration; benchmark edits are its vector and necessary clean setup. T20 CLI changes are version-only. Additional scope requires a reviewed card change.
+ 
+ ## Do not
+-- Do not weaken or delete any existing test or assertion.
+-- Do not hardcode version strings or caught vector totals.
+-- Do not use absolute user paths.
++- Do not manually edit generated governance, run human-only commands, weaken tests, claim independent self-review, sync an unspecified target or publish.
++- Do not promise identical legacy behavior for breaking security corrections.
++
++## Example
++Explicitly own the already-present parse_plan requirement-ID regex edit. Add tests/test_requirement_ids.py behavioral tests test_requirement_ids_accept_r4b_r5a, test_requirement_ids_reject_malformed and test_requirement_ids_reject_duplicates (planned names, not existing evidence). Move normalized positive-count storage to R5a/T15; T0 captures actual full-suite output and exit without an unbuilt parser. Preserve .ai/T0-DEVIATIONS.md D1-D4 exceptions.
+ 
+ ## Definition of done
+-- Failing tests reproduced in tests/test_osr.py and tests/test_sync_skill.py.
+-- All tests in tests/test_osr.py and tests/test_sync_skill.py pass cleanly.
+-- scripts/sync_skill.py --check --target <path> passes on temp-dir test.
+-- Full test suite green via confirmed global_verify command with pass count recorded.
++- Every mapped requirement and acceptance case has actual evidence. Missing empirical observations remain UNVERIFIED; manual requirements need real human signoff.
++- Formal verification and configured global checks pass with full captured output, exits, count where applicable, failure details and log paths.
++- Fresh spec/quality review inspects actual files and resolves findings under PLAN.md strategy; closure still requires actual OSR gates.
++- Handoff at most 250 words in transcript: task/state, files, behavior, actual checks/logs, review status, limitations and next action. No handoff file is implicitly authorized.
+--- active/.ai/tasks/T10.md
++++ proposed/.ai/tasks/T10.md
+@@ -1,28 +1,63 @@
+-# T10: Evidence classes in the ledger and audit
++# T10: Bind completion to current inputs and classify evidence
+ id: T10
+ requirements: R1
+ depends_on: T0
+-allowed_files: scripts/osr.py, tests/test_evidence_classes.py, evals/eval_suite.py
+-forbidden_files: 
++allowed_files: scripts/osr.py, tests/test_evidence_classes.py, tests/test_osr.py, tests/test_honest_reporting.py, evals/eval_suite.py
++forbidden_files: .ai/ledger.jsonl, .ai/state.json, .ai/STATE.md, .ai/AUDIT.md
+ context_files: .ai/PLAN.md
+-verify: python -m unittest tests.test_evidence_classes -v
++verify: python -m unittest discover -s tests -v
+ 
+ ## Goal
+-Implement explicit evidence classes (observed, heuristic, attested) in the ledger schema and cmd_audit. VERIFIED status requires >=1 observed check. Legacy unclassified entries report UNCLASSIFIED-LEGACY with exit code 2. Add benchmark vector V14.
++Bind completion to current inputs and classify evidence. Implement this bounded packet only after actual human plan approval and predecessor closure. This proposal changes no task state.
++
++## Inputs and context
++scripts/osr.py: Ledger.append, Ledger.verify_chain, input_hash, cmd_start, cmd_verify, cmd_review, cmd_done, requirement_rows, cmd_audit, gate_status. tests/test_honest_reporting.py: TestHonestReporting.test_honest_reporting_and_heuristics; evals/eval_suite.py: EvalProject, run_adversarial_benchmark.
++Locate definitions with rg -n and read bounded ranges, relevant callers and tests in the named files before editing. These required source locations supplement context_files. The whole CLI exceeds the context budget; do not dump it or use summaries in place of the actual code. Read SKILL.md and applicable rules once per session.
++
++Read functions: `Ledger.append`, `verify_chain`, `input_hash`, `cmd_start`, `cmd_verify`, `cmd_review`, `cmd_done`, `requirement_rows`, `cmd_audit`, `gate_status`.
++
++
++## Work
++
++- Define an explicit registry for event types and their evidence role. Distinguish administrative events from evidence-bearing events; no accidental default evidence class.
++- Classify direct execution outcomes as observed, static/output-derived approximations as heuristic, and human declarations as attested.
++- A verify event can contain observed execution results and heuristic parser/check results. Do not label every nested result observed merely because the command executed.
++- Record the task/card/context identity and approved plan/config identity needed to validate completion.
++- Require done evidence newer than the relevant current approval and matching current card/context inputs; validate current code and review freshness too.
++- Reject task-ID reuse, changed cards, stale reviews and stale conformance evidence as proof of current completion.
++- Keep legacy hash chains verifiable without rewriting entries. Apply the approved legacy-evidence policy in audit.
++- Retain `HUMAN-SIGNED` for manual requirements; observed evidence alone must not bypass manual signoff or other completion gates.
++
++## Acceptance cases
++
++- Fresh complete control passes.
++- Reused done ID with a different card is STALE.
++- Changed context, code, plan or configuration cannot inherit VERIFIED.
++- A new approval does not silently validate old done entries.
++- Heuristic-only/attested-only evidence does not become automatic VERIFIED.
++- Current legacy evidence is disclosed with the approved non-green outcome.
++- Legacy chain verification succeeds without rehashing historical entries.
++- Unknown evidence event types fail explicitly.
++
++V14 includes literal, disguised, subtle and task-ID-reuse variants, each with a clean control.
++
++Apply the shared interfaces and review policy in PLAN.md.
+ 
+ ## Constraints
+-- Python 3.8+ standard library only.
+-- No default class: an entry type without a declared class fails tests/audit.
+-- Audit requirement traceability table displays evidence classes present per requirement.
+-- osr ledger-verify verifies legacy v0.3.1 ledgers without breaking.
+-- A task counts toward a requirement only if its done entry is newer than the current plan approval and the card's recorded input hash matches the current card; otherwise STALE and audit exits non-zero.
+-- Benchmark vector V14 includes control run and literal, disguised, subtle and task-id-reuse variants.
++- Keep scripts/osr.py stdlib-only and Python 3.8-compatible. Preserve unrelated pre-existing work.
++- Obtain human approval of focused failing tests before new gate implementation; no fabricated historical red run.
++- Formal verification uses the exact confirmed full-discovery command above plus configured global verification. Focused checks mentioned in this packet are development checks; never silently remove global verification to avoid a repeated run.
++- Existing fixture edits are limited to this packet contract migration; benchmark edits are its vector and necessary clean setup. T20 CLI changes are version-only. Additional scope requires a reviewed card change.
+ 
+ ## Do not
+-- Do not assign a default class to unclassified entries.
+-- Do not let requirements with heuristic-only evidence report plain VERIFIED.
++- Do not manually edit generated governance, run human-only commands, weaken tests, claim independent self-review, sync an unspecified target or publish.
++- Do not promise identical legacy behavior for breaking security corrections.
++
++## Example
++A clean control passes; its corresponding attack is rejected or explicitly UNVERIFIED with evidence tied to the current attempt.
+ 
+ ## Definition of done
+-- tests/test_evidence_classes.py reproduces evasion (including test_audit_ignores_stale_task_state) and passes after implementation.
+-- Benchmark vector V14 catches unclassified or disguised heuristic evidence.
+-- osr verify T10 passes.
++- Every mapped requirement and acceptance case has actual evidence. Missing empirical observations remain UNVERIFIED; manual requirements need real human signoff.
++- Formal verification and configured global checks pass with full captured output, exits, count where applicable, failure details and log paths.
++- Fresh spec/quality review inspects actual files and resolves findings under PLAN.md strategy; closure still requires actual OSR gates.
++- Handoff at most 250 words in transcript: task/state, files, behavior, actual checks/logs, review status, limitations and next action. No handoff file is implicitly authorized.
+--- active/.ai/tasks/T11.md
++++ proposed/.ai/tasks/T11.md
+@@ -1,27 +1,57 @@
+-# T11: Stop hook correctness and loop guard
++# T11: Structured status and bounded contract-correct hooks
+ id: T11
+ requirements: R2
+-depends_on: T10
++depends_on: T17
++allowed_files: scripts/osr.py, integrations/antigravity/stop_hook.py, integrations/antigravity/pre_tool.py, integrations/antigravity/hooks.json, tests/test_stop_hook.py, tests/test_status_json.py, tests/test_pre_tool.py, evals/eval_suite.py
++forbidden_files: .ai/ledger.jsonl, .ai/state.json, .ai/STATE.md, .ai/AUDIT.md
++context_files: .ai/PLAN.md, docs/vendor/antigravity-hooks-2026-10-22.md, integrations/antigravity/hooks.json
++verify: python -m unittest discover -s tests -v
+ seams: antigravity_hook
+-allowed_files: integrations/antigravity/stop_hook.py, tests/test_stop_hook.py, evals/eval_suite.py
+-forbidden_files: 
+-context_files: .ai/PLAN.md, docs/vendor/antigravity-hooks-2026-10-22.md
+-verify: python -m unittest tests.test_stop_hook -v
++negative_tests: tests.test_pre_tool.TestPreToolContract.test_path_traversal_denied
++conformance: python -m unittest discover -s tests -v
+ 
+ ## Goal
+-Update stop_hook.py to emit official schema adhering to docs/vendor/antigravity-hooks-2026-10-22.md, implement loop guard permitting termination after N=3 identical blocks tracked in .ai/loop_guard.json, implement PreToolUse schema conformance, and add benchmark vector V15.
++Structured status and bounded contract-correct hooks. Implement this bounded packet only after actual human plan approval and predecessor closure. This proposal changes no task state.
++
++## Inputs and context
++scripts/osr.py: cmd_status, next_action, gate_status, requirement_rows, Ledger.append; integrations/antigravity/stop_hook.py: main; pre_tool.py: matches_pattern, main; hooks.json; tests/test_stop_hook.py: TestStopHookContract.test_stop_hook_contract and test_stop_hook_when_no_active_workflow.
++Locate definitions with rg -n and read bounded ranges, relevant callers and tests in the named files before editing. These required source locations supplement context_files. The whole CLI exceeds the context budget; do not dump it or use summaries in place of the actual code. Read SKILL.md and applicable rules once per session.
++
++Read the captured vendor contract. Do not infer a schema from the current implementation or test expectations.
++
++## Work
++
++- Make `status --json` emit one JSON object, no Markdown or incidental stdout.
++- Include machine-readable completion, approval validity, pending-human action, task states, next action and loop-guard information. Keep human-readable status available.
++- Keep a status query observational; do not append ledger events merely because status is read.
++- Make Stop consume structured status. Emit only fields appropriate to the documented Stop contract.
++- Allow stopping when human action is required. Never force an approval loop.
++- Persist an atomic loop guard keyed to meaningful workflow state, allowing stop after three consecutive identical blocks; genuine progress resets it.
++- Record guard-release events through an OSR-supported operation, not by editing ledger JSON in the hook.
++- Define malformed input/status failure behavior explicitly and visibly; no silent successful-completion claim.
++- Validate PreToolUse schema, protected paths, traversal, alternate tool arguments and scoped edits against the supported harness contract. State that shell-command regexes do not establish OS-level isolation.
++
++## Acceptance cases documented contract fixtures, three identical blocks, progress reset, human-pending stop, no workflow, malformed state, concurrent counter writes, and protected-path cases. Include archived task states in a test so stale historical tasks do not cause endless continuation.
++
++V15 must distinguish protocol correctness from loop-guard behavior. Contract tests use parseable, source-linked fixtures; vendor examples containing comments/ellipsis must not be blindly passed to `json.loads`.
++
++Source of truth: Stop blocks with decision="continue", not "block". On malformed input/status return a visible diagnostic permitting bounded termination without a completion claim. New negative test mapping: antigravity_hook -> tests.test_pre_tool.TestPreToolContract.test_path_traversal_denied (to be authored).
+ 
+ ## Constraints
+-- Python 3.8+ standard library only.
+-- Conformance tested against docs/vendor/antigravity-hooks-2026-10-22.md using dynamically extracted examples as fixtures.
+-- Guard-allowed terminations are logged in the ledger and shown by audit/status.
+-- Benchmark vector V15 includes control run and literal, disguised, and subtle variants.
++- Keep scripts/osr.py stdlib-only and Python 3.8-compatible. Preserve unrelated pre-existing work.
++- Obtain human approval of focused failing tests before new gate implementation; no fabricated historical red run.
++- Formal verification uses the exact confirmed full-discovery command above plus configured global verification. Focused checks mentioned in this packet are development checks; never silently remove global verification to avoid a repeated run.
++- Existing fixture edits are limited to this packet contract migration; benchmark edits are its vector and necessary clean setup. T20 CLI changes are version-only. Additional scope requires a reviewed card change.
+ 
+ ## Do not
+-- Do not hardcode arbitrary schema fields not defined in the vendor specification.
+-- Do not reset loop-guard counter without state change or human interaction.
++- Do not manually edit generated governance, run human-only commands, weaken tests, claim independent self-review, sync an unspecified target or publish.
++- Do not promise identical legacy behavior for breaking security corrections.
++
++## Example
++Source of truth: Stop blocks with decision="continue", not "block". On malformed input/status return a visible diagnostic permitting bounded termination without a completion claim. New negative test mapping: antigravity_hook -> tests.test_pre_tool.TestPreToolContract.test_path_traversal_denied (to be authored).
+ 
+ ## Definition of done
+-- tests/test_stop_hook.py passes schema and loop-guard conformance tests.
+-- Benchmark vector V15 catches stop hook contract evasion.
+-- osr verify T11 passes.
++- Every mapped requirement and acceptance case has actual evidence. Missing empirical observations remain UNVERIFIED; manual requirements need real human signoff.
++- Formal verification and configured global checks pass with full captured output, exits, count where applicable, failure details and log paths.
++- Fresh spec/quality review inspects actual files and resolves findings under PLAN.md strategy; closure still requires actual OSR gates.
++- Handoff at most 250 words in transcript: task/state, files, behavior, actual checks/logs, review status, limitations and next action. No handoff file is implicitly authorized.
+--- active/.ai/tasks/T12.md
++++ proposed/.ai/tasks/T12.md
+@@ -1,24 +1,47 @@
+-# T12: Antigravity agent terminal interactive prompt assessment
++# T12: Assess the actual agent terminal without granting real authority
+ id: T12
+ requirements: R4b
+ depends_on: T11
+-allowed_files: scripts/test_agent_tty.py, .ai/TTY_ANALYSIS.md
+-forbidden_files: 
++allowed_files: scripts/test_agent_tty.py, .ai/TTY_ANALYSIS.md, tests/test_agent_tty.py
++forbidden_files: .ai/ledger.jsonl, .ai/state.json, .ai/STATE.md, .ai/AUDIT.md
+ context_files: .ai/PLAN.md, scripts/test_agent_tty.py
+-verify: python -m unittest tests.test_osr -v
++verify: python -m unittest discover -s tests -v
+ 
+ ## Goal
+-Attempt to run approve-plan from the real Antigravity agent terminal session, document whether it can answer an interactive prompt or fails closed without TTY, document findings in .ai/TTY_ANALYSIS.md, and obtain human signoff.
++Assess the actual agent terminal without granting real authority. Implement this bounded packet only after actual human plan approval and predecessor closure. This proposal changes no task state.
++
++## Inputs and context
++scripts/test_agent_tty.py: main; scripts/osr.py: check_approval_secret (read only). Current probe prints isatty values without an interactive challenge.
++Locate definitions with rg -n and read bounded ranges, relevant callers and tests in the named files before editing. These required source locations supplement context_files. The whole CLI exceeds the context budget; do not dump it or use summaries in place of the actual code. Read SKILL.md and applicable rules once per session.
++
++## Work
++
++- Extend the diagnostic to exercise a harmless interactive challenge/getpass path with timeout/EOF behavior. Never request, print or store a real approval secret.
++- Run it in the real Antigravity agent terminal and a human-operated terminal. A Codex terminal run is not evidence about Antigravity.
++- Record harness identity, command, TTY state, whether input can be supplied, exit behavior and limitations.
++- If an approval-command rehearsal is required, the human supervises an isolated disposable workflow with a dummy secret; do not execute supervisory commands against the live repository as the agent.
++- Apply the decision rule: if the agent can answer prompts, document that prompting does not separate human authority; require external access controls for that guarantee.
++- Prepare a follow-up issue draft if needed; publishing it is a separate action.
++
++## Acceptance cases empirical report and real human signoff. If the harness is unavailable, report BLOCKED/UNVERIFIED honestly and complete independent preparation only. Do not simulate the missing observation.
++
++Apply the shared interfaces and review policy in PLAN.md.
+ 
+ ## Constraints
+-- Apply decision rule: if agent terminal can answer prompts, document lack of protection in that harness, recommend separate OS user or CI-only approvals, and open follow-up.
+-- Script referenced: scripts/test_agent_tty.py.
+-- Check: manual.
++- Keep scripts/osr.py stdlib-only and Python 3.8-compatible. Preserve unrelated pre-existing work.
++- Obtain human approval of focused failing tests before new gate implementation; no fabricated historical red run.
++- Formal verification uses the exact confirmed full-discovery command above plus configured global verification. Focused checks mentioned in this packet are development checks; never silently remove global verification to avoid a repeated run.
++- Existing fixture edits are limited to this packet contract migration; benchmark edits are its vector and necessary clean setup. T20 CLI changes are version-only. Additional scope requires a reviewed card change.
+ 
+ ## Do not
+-- Do not sign off without empirical verification from the agent terminal session.
++- Do not manually edit generated governance, run human-only commands, weaken tests, claim independent self-review, sync an unspecified target or publish.
++- Do not promise identical legacy behavior for breaking security corrections.
++
++## Example
++A clean control passes; its corresponding attack is rejected or explicitly UNVERIFIED with evidence tied to the current attempt.
+ 
+ ## Definition of done
+-- scripts/test_agent_tty.py executed in agent terminal.
+-- .ai/TTY_ANALYSIS.md documents empirical findings.
+-- Human signs off via osr signoff R4b --by <name>.
++- Every mapped requirement and acceptance case has actual evidence. Missing empirical observations remain UNVERIFIED; manual requirements need real human signoff.
++- Formal verification and configured global checks pass with full captured output, exits, count where applicable, failure details and log paths.
++- Fresh spec/quality review inspects actual files and resolves findings under PLAN.md strategy; closure still requires actual OSR gates.
++- Handoff at most 250 words in transcript: task/state, files, behavior, actual checks/logs, review status, limitations and next action. No handoff file is implicitly authorized.
+--- active/.ai/tasks/T13.md
++++ proposed/.ai/tasks/T13.md
+@@ -1,29 +1,52 @@
+-# T13: Approval secret unreadable by agent (scrypt & terminal prompt)
++# T13: Protected approvals, migration and testable boundaries
+ id: T13
+ requirements: R4
+ depends_on: T12
+-allowed_files: scripts/osr.py, tests/test_approval_scrypt.py, evals/eval_suite.py
+-forbidden_files: 
+-context_files: .ai/PLAN.md
+-verify: python -m unittest tests.test_approval_scrypt -v
++allowed_files: scripts/osr.py, integrations/antigravity/pre_tool.py, tests/test_approval_scrypt.py, tests/test_pre_tool.py, tests/test_osr.py, tests/test_fixture_capture.py, tests/test_hardening_hypotheses.py, tests/test_honest_reporting.py, tests/test_command_authorization.py, tests/test_evidence_classes.py, tests/test_status_json.py, tests/test_zero_runner.py, evals/eval_suite.py, references/setups.md
++forbidden_files: .ai/ledger.jsonl, .ai/state.json, .ai/STATE.md, .ai/AUDIT.md
++context_files: .ai/PLAN.md, docs/vendor/antigravity-hooks-2026-10-22.md, references/setups.md
++verify: python -m unittest discover -s tests -v
+ 
+ ## Goal
+-Implement salted hashlib.scrypt approval secrets with interactive terminal prompt (getpass), remove --secret and OSR_APPROVAL_SECRET paths, add set-secret with password rotation rules, define sensitive flags, enforce secret checks on human commands, and add benchmark vector V17.
++Protected approvals, migration and testable boundaries. Implement this bounded packet only after actual human plan approval and predecessor closure. This proposal changes no task state.
++
++## Inputs and context
++scripts/osr.py: check_approval_secret, cmd_approve, cmd_unblock, cmd_reset, cmd_signoff, cmd_waive, sha_config, main; integrations/antigravity/pre_tool.py: main; tests/test_osr.py: Project; evals/eval_suite.py: EvalProject. Inspect affected isolated setup helpers before fixture migration.
++Locate definitions with rg -n and read bounded ranges, relevant callers and tests in the named files before editing. These required source locations supplement context_files. The whole CLI exceeds the context budget; do not dump it or use summaries in place of the actual code. Read SKILL.md and applicable rules once per session.
++
++## Work
++
++- Implement salted `hashlib.scrypt` verification with explicit stored parameters and constant-time comparison.
++- Implement `set-secret`, confirmation, old-secret verification for rotation, and fingerprint linkage to ledger evidence.
++- Remove plaintext `--secret`/environment input from protected approval paths; never log the entered secret.
++- Fail protected operations closed without a controlling terminal; handle EOF and interrupt safely.
++- Refuse legacy unsalted configuration for protected operations until the human migrates it.
++- Cover approve-plan, unblock, reset, signoff and sensitive waivers consistently.
++- Record unprotected approvals under the policy approved in planning reconciliation.
++- Bind sensitive waivers to task/attempt/check or approved configuration identity so they do not become permanent blanket exemptions.
++- Update hook protections for supported secret-access surfaces while documenting their limits.
++
++Testing boundary: inject/mock input only inside unit tests or use an isolated PTY fixture with dummy secrets. Do not add a production environment variable or debug flag that bypasses authentication for tests. Preserve meaningful CLI integration coverage.
++
++## Acceptance cases correct/wrong secret, unique salts, rotation, fingerprint mismatch, no TTY, EOF, interrupt, legacy migration, post-approval setup warning, sensitive flags and no secret leakage in logs/errors. V17 adds evasions plus clean controls.
++
++Apply PLAN.md approval-fixture migration policy before implementation. Proposed unprotected approval audit outcome is exit 2 pending decision D3. Test-only mocked input or isolated dummy-secret PTY fixtures must not introduce production authentication bypasses.
+ 
+ ## Constraints
+-- Python 3.8+ standard library only.
+-- Fail closed when no controlling TTY is present.
+-- Refuse legacy unsalted SHA-256 secret in config until set-secret is rerun.
+-- First set-secret happens before agent session; subsequent rotations verify old secret.
+-- Audit flags any set-secret performed after plan approval.
+-- Sensitive flags defined: selection flags, custom-parser exemption, --allow-config.
+-- Benchmark vector V17 includes control run and literal, disguised, and subtle variants.
++- Keep scripts/osr.py stdlib-only and Python 3.8-compatible. Preserve unrelated pre-existing work.
++- Obtain human approval of focused failing tests before new gate implementation; no fabricated historical red run.
++- Formal verification uses the exact confirmed full-discovery command above plus configured global verification. Focused checks mentioned in this packet are development checks; never silently remove global verification to avoid a repeated run.
++- Existing fixture edits are limited to this packet contract migration; benchmark edits are its vector and necessary clean setup. T20 CLI changes are version-only. Additional scope requires a reviewed card change.
+ 
+ ## Do not
+-- Do not accept plaintext or environment variable secrets.
+-- Do not allow agent tools to access secret hash configurations.
++- Do not manually edit generated governance, run human-only commands, weaken tests, claim independent self-review, sync an unspecified target or publish.
++- Do not promise identical legacy behavior for breaking security corrections.
++
++## Example
++Apply PLAN.md approval-fixture migration policy before implementation. Proposed unprotected approval audit outcome is exit 2 pending decision D3. Test-only mocked input or isolated dummy-secret PTY fixtures must not introduce production authentication bypasses.
+ 
+ ## Definition of done
+-- tests/test_approval_scrypt.py tests scrypt hashing, TTY failure, rotation, and flag verification.
+-- Benchmark vector V17 catches approval secret disclosure/bypass.
+-- osr verify T13 passes.
++- Every mapped requirement and acceptance case has actual evidence. Missing empirical observations remain UNVERIFIED; manual requirements need real human signoff.
++- Formal verification and configured global checks pass with full captured output, exits, count where applicable, failure details and log paths.
++- Fresh spec/quality review inspects actual files and resolves findings under PLAN.md strategy; closure still requires actual OSR gates.
++- Handoff at most 250 words in transcript: task/state, files, behavior, actual checks/logs, review status, limitations and next action. No handoff file is implicitly authorized.
+--- active/.ai/tasks/T14.md
++++ proposed/.ai/tasks/T14.md
+@@ -1,27 +1,49 @@
+-# T14: Harden quick path
++# T14: Quick mode and test-configuration integrity
+ id: T14
+ requirements: R3
+ depends_on: T13
+-allowed_files: scripts/osr.py, tests/test_quick_hardening.py, evals/eval_suite.py
+-forbidden_files: 
++allowed_files: scripts/osr.py, tests/test_quick_hardening.py, tests/test_osr.py, tests/test_hardening_hypotheses.py, evals/eval_suite.py
++forbidden_files: .ai/ledger.jsonl, .ai/state.json, .ai/STATE.md, .ai/AUDIT.md
+ context_files: .ai/PLAN.md
+-verify: python -m unittest tests.test_quick_hardening -v
++verify: python -m unittest discover -s tests -v
+ 
+ ## Goal
+-Harden osr quick with confirmed verify command checks, weak-command rejection, ledger-chain verification (require_chain=True), and test-config drift checks (running in verify and quick against confirm-commands fingerprints, bypassable only via secret-gated --allow-config), and add benchmark vector V16.
++Quick mode and test-configuration integrity. Implement this bounded packet only after actual human plan approval and predecessor closure. This proposal changes no task state.
++
++## Inputs and context
++scripts/osr.py: cmd_quick, run_check, walk_tree, diff_tree, cmd_verify, cmd_confirm, confirmed, is_verify_cmd_confirmed; tests/test_hardening_hypotheses.py: test_h8_quick_path_cannot_mark_tasks_done.
++Locate definitions with rg -n and read bounded ranges, relevant callers and tests in the named files before editing. These required source locations supplement context_files. The whole CLI exceeds the context budget; do not dump it or use summaries in place of the actual code. Read SKILL.md and applicable rules once per session.
++
++## Work
++
++- Make quick verify the chain and authorize its command using T17.
++- Reject quick during an active formal task.
++- Share the applicable static-check and execution pipeline; do not duplicate a weaker quick implementation.
++- Define a reliable quick baseline: tracked modifications, staged/unstaged changes, untracked files, deletions and renames. Define non-Git behavior explicitly; fail or mark unsupported evidence UNVERIFIED rather than assuming a nonexistent baseline.
++- Fingerprint the approved test-config set at confirmation: pytest.ini, setup.cfg, tox.ini, pyproject.toml, Jest/Vitest configurations, package.json scripts, ESLint configs and tsconfig.json.
++- Detect creation, deletion and modification relative to that fingerprint in verify and quick. For package.json compare the declared scripts subset deterministically.
++- A config bypass requires protected human authorization and records its exact scope. Decide whether it grants one use or updates an approved fingerprint; it must not silently authorize future drift.
++- Report every intentionally skipped formal gate in stdout and ledger. Quick does not finish a task or satisfy spec/quality review.
++
++## Acceptance cases valid control, corrupted chain, unconfirmed/weak command, active task, config add/delete/change, allowed config decision, scope violations, Git path edge cases, and explicit skipped-gate reporting. V16 exercises both chain and authorization failures.
++
++Apply the shared interfaces and review policy in PLAN.md.
+ 
+ ## Constraints
+-- Python 3.8+ standard library only.
+-- Minimal test-config file list defined: pytest.ini, setup.cfg, tox.ini, pyproject.toml, jest.config.js, jest.config.ts, jest.config.json, vitest.config.js, vitest.config.ts, package.json [scripts block only], .eslintrc.js, .eslintrc.json, tsconfig.json.
+-- Quick refuses execution during in-progress task attempts.
+-- Skipped verification gates recorded explicitly in ledger and stdout.
+-- Benchmark vector V16 includes control run and literal, disguised, and subtle variants.
++- Keep scripts/osr.py stdlib-only and Python 3.8-compatible. Preserve unrelated pre-existing work.
++- Obtain human approval of focused failing tests before new gate implementation; no fabricated historical red run.
++- Formal verification uses the exact confirmed full-discovery command above plus configured global verification. Focused checks mentioned in this packet are development checks; never silently remove global verification to avoid a repeated run.
++- Existing fixture edits are limited to this packet contract migration; benchmark edits are its vector and necessary clean setup. T20 CLI changes are version-only. Additional scope requires a reviewed card change.
+ 
+ ## Do not
+-- Do not allow unconfirmed or weak commands in quick.
+-- Do not bypass chain integrity verification in quick.
++- Do not manually edit generated governance, run human-only commands, weaken tests, claim independent self-review, sync an unspecified target or publish.
++- Do not promise identical legacy behavior for breaking security corrections.
++
++## Example
++A clean control passes; its corresponding attack is rejected or explicitly UNVERIFIED with evidence tied to the current attempt.
+ 
+ ## Definition of done
+-- tests/test_quick_hardening.py verifies quick hardening rules.
+-- Benchmark vector V16 catches unconfirmed quick command and broken ledger chain.
+-- osr verify T14 passes.
++- Every mapped requirement and acceptance case has actual evidence. Missing empirical observations remain UNVERIFIED; manual requirements need real human signoff.
++- Formal verification and configured global checks pass with full captured output, exits, count where applicable, failure details and log paths.
++- Fresh spec/quality review inspects actual files and resolves findings under PLAN.md strategy; closure still requires actual OSR gates.
++- Handoff at most 250 words in transcript: task/state, files, behavior, actual checks/logs, review status, limitations and next action. No handoff file is implicitly authorized.
+--- active/.ai/tasks/T15.md
++++ proposed/.ai/tasks/T15.md
+@@ -1,29 +1,54 @@
+-# T15: Positive test counts and new test execution
++# T15: Runner counts and evidence from this exact attempt
+ id: T15
+ requirements: R5a
+ depends_on: T14
++allowed_files: scripts/osr.py, tests/test_runner_parsers.py, docs/vendor/runner_outputs/*, tests/test_osr.py, tests/test_zero_runner.py, tests/test_fixture_capture.py, evals/eval_suite.py
++forbidden_files: .ai/ledger.jsonl, .ai/state.json, .ai/STATE.md, .ai/AUDIT.md
++context_files: .ai/PLAN.md, docs/vendor/runner_outputs/unittest_output.txt, docs/vendor/runner_outputs/pytest_output.txt, docs/vendor/runner_outputs/runner_specs.md
++verify: python -m unittest discover -s tests -v
+ seams: runner_output_unittest, runner_output_pytest
+-allowed_files: scripts/osr.py, tests/test_runner_parsers.py, evals/eval_suite.py
+-forbidden_files: 
+-context_files: .ai/PLAN.md, docs/vendor/runner_outputs/unittest_output.txt, docs/vendor/runner_outputs/pytest_output.txt
+-conformance: python -m unittest tests.test_runner_parsers -v
+-verify: python -m unittest tests.test_runner_parsers -v
++negative_tests: tests.test_runner_parsers.TestRunnerParsers.test_unittest_zero_tests_rejected, tests.test_runner_parsers.TestRunnerParsers.test_pytest_stale_artifact_rejected
++conformance: python -m unittest discover -s tests -v
+ 
+ ## Goal
+-Implement positive test count parsers for unittest and pytest (jest/vitest as experimental notes), verify newly added or modified test functions appear in runner output (relative to base_commit recorded at start), enforce standard locale flags (LC_ALL=C), and add benchmark vector V18.
++Runner counts and evidence from this exact attempt. Implement this bounded packet only after actual human plan approval and predecessor closure. This proposal changes no task state.
++
++## Inputs and context
++scripts/osr.py: cmd_start, extract_passed_tests, run_cmd, run_recorded, cmd_confirm, cmd_verify, cmd_fixture_capture, gate_status; tests/test_zero_runner.py: TestZeroRunner.test_verify_zero_tests_rejected; docs/vendor/runner_outputs/ real captures and provenance.
++Locate definitions with rg -n and read bounded ranges, relevant callers and tests in the named files before editing. These required source locations supplement context_files. The whole CLI exceeds the context budget; do not dump it or use summaries in place of the actual code. Read SKILL.md and applicable rules once per session.
++
++## Work
++
++- Record base commit when available and snapshot copies/hashes needed for dirty and non-Git starting trees. New/changed tests must be measured against the task-start state, not just HEAD when the start was already dirty.
++- Capture real unittest/pytest output with provenance and include passing, failing, zero-test, skipped-only and non-verbose cases. Keep pytest a test-environment dependency, not a runtime dependency of osr.py.
++- Record parsed executed/pass/fail/skip counts as heuristic evidence alongside the observed exit outcome; store the count in confirmation records and expose it in status.
++- Require positive executed-test evidence for test verification. Do not demand test counts from legitimate compiler/linter/conformance commands: declare and enforce command roles.
++- Detect newly added/modified test identities and require execution evidence for them. Preserve fully qualified names; remove substring matches that confuse similarly named tests.
++- Scope XML/JSON result artifacts to the current command and attempt with captured identity/hash. Never scan unrelated old `.ai/logs/*.xml` as current evidence.
++- Use `LC_ALL=C` and `PYTHONIOENCODING=utf-8` where applicable. Unknown/localized output gets an actionable UNVERIFIED outcome, not invented counts.
++- Treat non-verbose test runs consistently: require an approved verbose equivalent or mark identity coverage UNVERIFIED.
++- Keep Jest/Vitest experimental until their evidence has real contract fixtures; do not fabricate support.
++- Repair command-level baseline keys (`task_0` versus `task`) if retained for red/green summaries. Do not describe command-level transitions as proof that each negative test failed first.
++
++## Acceptance cases positive/zero/skipped-only counts; unparseable output; changed tests omitted; name collision; stale XML with empty current output; altered artifact hash; non-Git fallback; dirty starting tree; compiler command without test counts; and correctly scoped current artifacts. V18 includes stale-output evasion.
++
++Planned seam-to-test mapping: runner_output_unittest -> tests.test_runner_parsers.TestRunnerParsers.test_unittest_zero_tests_rejected; runner_output_pytest -> tests.test_runner_parsers.TestRunnerParsers.test_pytest_stale_artifact_rejected. Capture real versioned runner output and provenance; runner_specs.md currently contains only a heading and short description, not a sufficient contract by itself.
+ 
+ ## Constraints
+-- Python 3.8+ standard library only.
+-- Unittest and pytest output parsers tested against captured real-run seam sources.
+-- Newly added/modified test names determined from git diff against base_commit recorded at osr start.
+-- Non-verbose runner output flags missing test names and requires verbose flag or marks UNVERIFIED.
+-- Benchmark vector V18 includes control run and literal, disguised, and subtle variants.
++- Keep scripts/osr.py stdlib-only and Python 3.8-compatible. Preserve unrelated pre-existing work.
++- Obtain human approval of focused failing tests before new gate implementation; no fabricated historical red run.
++- Formal verification uses the exact confirmed full-discovery command above plus configured global verification. Focused checks mentioned in this packet are development checks; never silently remove global verification to avoid a repeated run.
++- Existing fixture edits are limited to this packet contract migration; benchmark edits are its vector and necessary clean setup. T20 CLI changes are version-only. Additional scope requires a reviewed card change.
+ 
+ ## Do not
+-- Do not let runner output with 0 passed tests produce VERIFIED.
+-- Do not accept non-English runner output without locale-independent parsing.
++- Do not manually edit generated governance, run human-only commands, weaken tests, claim independent self-review, sync an unspecified target or publish.
++- Do not promise identical legacy behavior for breaking security corrections.
++
++## Example
++Planned seam-to-test mapping: runner_output_unittest -> tests.test_runner_parsers.TestRunnerParsers.test_unittest_zero_tests_rejected; runner_output_pytest -> tests.test_runner_parsers.TestRunnerParsers.test_pytest_stale_artifact_rejected. Capture real versioned runner output and provenance; runner_specs.md currently contains only a heading and short description, not a sufficient contract by itself.
+ 
+ ## Definition of done
+-- tests/test_runner_parsers.py passes parser conformance tests.
+-- Benchmark vector V18 catches zero-test and unparsed runner outputs.
+-- osr verify T15 passes.
++- Every mapped requirement and acceptance case has actual evidence. Missing empirical observations remain UNVERIFIED; manual requirements need real human signoff.
++- Formal verification and configured global checks pass with full captured output, exits, count where applicable, failure details and log paths.
++- Fresh spec/quality review inspects actual files and resolves findings under PLAN.md strategy; closure still requires actual OSR gates.
++- Handoff at most 250 words in transcript: task/state, files, behavior, actual checks/logs, review status, limitations and next action. No handoff file is implicitly authorized.
+--- active/.ai/tasks/T16.md
++++ proposed/.ai/tasks/T16.md
+@@ -1,27 +1,48 @@
+-# T16: Assertionless tests, selection flags, and extra tautologies
++# T16: Test-integrity checks and negative-test obligations
+ id: T16
+ requirements: R5b
+ depends_on: T15
+-allowed_files: scripts/osr.py, tests/test_assertionless_scan.py, evals/eval_suite.py
+-forbidden_files: 
++allowed_files: scripts/osr.py, tests/test_assertionless_scan.py, tests/test_tautological_ast.py, tests/test_hardening_hypotheses.py, evals/eval_suite.py, assets/task-card.md, references/task-cards.md
++forbidden_files: .ai/ledger.jsonl, .ai/state.json, .ai/STATE.md, .ai/AUDIT.md
+ context_files: .ai/PLAN.md
+-verify: python -m unittest tests.test_assertionless_scan -v
++verify: python -m unittest discover -s tests -v
+ 
+ ## Goal
+-Implement assertionless test function scanning via AST (Python) and regex (JS/TS), test runner selection flag rejection (unless waived for sensitive flags in ledger), extended tautology checks wired into verify and quick, and add benchmark vector V19.
++Test-integrity checks and negative-test obligations. Implement this bounded packet only after actual human plan approval and predecessor closure. This proposal changes no task state.
++
++## Inputs and context
++scripts/osr.py: scan_tautological_python, scan_tautological_js, run_check, cmd_verify, cmd_quick, extract_passed_tests, gate_status; tests/test_tautological_ast.py; tests/test_hardening_hypotheses.py: test_h7_negative_tests_semantic_vacuity. Consume T15 exact identities.
++Locate definitions with rg -n and read bounded ranges, relevant callers and tests in the named files before editing. These required source locations supplement context_files. The whole CLI exceeds the context budget; do not dump it or use summaries in place of the actual code. Read SKILL.md and applicable rules once per session.
++
++## Work
++
++- Add Python AST and JS/TS heuristic checks for assertionless new/modified tests and extended tautologies.
++- Handle legitimate assertion mechanisms such as assertRaises/pytest.raises and helper assertions conservatively. Unknown helper semantics are heuristic uncertainty, not proof of vacuity.
++- Detect unapproved selection flags and path filters; distinguish selection from options such as unittest's unrelated `-t` top-level-directory flag. Use runner-specific argument rules.
++- Wire the same checks into formal verify and quick.
++- Enforce the approved per-seam negative-test obligation, including an absent field. Define an explicit seam-to-test mapping if the flat list cannot establish coverage; document compatibility handling rather than silently guessing associations.
++- Require exact current-attempt execution of named negative tests using T15. Missing mandatory negative tests must not yield a passing verify followed only by a surprise at done.
++- Update tests that intentionally asserted a bypass succeeds into regression tests that assert it is rejected; preserve the attack scenario and clean control. This is a behavior correction, not permission to remove coverage.
++
++## Acceptance cases literal/disguised/subtle vacuity, valid helper/exception cases, selection exemptions with genuine authorization, similarly named tests, omitted negative_tests, and equivalent enforcement in verify/quick. V19 remains explicitly heuristic, not a mutation-testing guarantee.
++
++Apply the shared interfaces and review policy in PLAN.md.
+ 
+ ## Constraints
+-- Python 3.8+ standard library only.
+-- Assertionless test scanner tested against literal (test_assertionless_literal), disguised (test_assertionless_disguised), and subtle (test_assertionless_subtle) variants.
+-- Selection flag check tested against literal (test_selection_flags_literal), disguised (test_selection_flags_disguised), and subtle (test_selection_flags_subtle) variants.
+-- Tautology scanner tested against literal (test_tautology_literal), disguised (test_tautology_disguised), and subtle (test_tautology_subtle) variants.
+-- Benchmark vector V19 includes control run and literal, disguised, and subtle variants.
++- Keep scripts/osr.py stdlib-only and Python 3.8-compatible. Preserve unrelated pre-existing work.
++- Obtain human approval of focused failing tests before new gate implementation; no fabricated historical red run.
++- Formal verification uses the exact confirmed full-discovery command above plus configured global verification. Focused checks mentioned in this packet are development checks; never silently remove global verification to avoid a repeated run.
++- Existing fixture edits are limited to this packet contract migration; benchmark edits are its vector and necessary clean setup. T20 CLI changes are version-only. Additional scope requires a reviewed card change.
+ 
+ ## Do not
+-- Do not let assertionless tests pass without detection.
+-- Do not allow selection flags without a sensitive flag waiver in the ledger.
++- Do not manually edit generated governance, run human-only commands, weaken tests, claim independent self-review, sync an unspecified target or publish.
++- Do not promise identical legacy behavior for breaking security corrections.
++
++## Example
++A clean control passes; its corresponding attack is rejected or explicitly UNVERIFIED with evidence tied to the current attempt.
+ 
+ ## Definition of done
+-- tests/test_assertionless_scan.py verifies detection across all variants.
+-- Benchmark vector V19 catches assertionless tests and evasion variants.
+-- osr verify T16 passes.
++- Every mapped requirement and acceptance case has actual evidence. Missing empirical observations remain UNVERIFIED; manual requirements need real human signoff.
++- Formal verification and configured global checks pass with full captured output, exits, count where applicable, failure details and log paths.
++- Fresh spec/quality review inspects actual files and resolves findings under PLAN.md strategy; closure still requires actual OSR gates.
++- Handoff at most 250 words in transcript: task/state, files, behavior, actual checks/logs, review status, limitations and next action. No handoff file is implicitly authorized.
+--- /dev/null
++++ proposed/.ai/tasks/T17.md
+@@ -0,0 +1,50 @@
++# T17: Authorize the command, not just its interpreter
++id: T17
++requirements: R6
++depends_on: T10
++allowed_files: scripts/osr.py, tests/test_command_authorization.py, tests/test_osr.py, tests/test_fixture_capture.py, tests/test_zero_runner.py, tests/test_hardening_hypotheses.py, tests/test_honest_reporting.py, evals/eval_suite.py
++forbidden_files: .ai/ledger.jsonl, .ai/state.json, .ai/STATE.md, .ai/AUDIT.md
++context_files: .ai/PLAN.md
++verify: python -m unittest discover -s tests -v
++
++## Goal
++Authorize the command, not just its interpreter. Implement this bounded packet only after actual human plan approval and predecessor closure. This proposal changes no task state.
++
++## Inputs and context
++scripts/osr.py: is_verify_cmd_confirmed, confirmed, validate_card, cmd_confirm, cmd_fixture_capture and every confirmation helper caller; tests/test_fixture_capture.py: TestFixtureCaptureAndSeams.test_fixture_capture_and_seam_source; evals/eval_suite.py: eval_unconfirmed_command, EvalProject.
++Locate definitions with rg -n and read bounded ranges, relevant callers and tests in the named files before editing. These required source locations supplement context_files. The whole CLI exceeds the context budget; do not dump it or use summaries in place of the actual code. Read SKILL.md and applicable rules once per session.
++
++Read functions: `is_verify_cmd_confirmed`, `confirmed`, `validate_card`, `cmd_confirm`, `cmd_fixture_capture`, and all callers of the confirmation helper.
++
++
++## Work
++
++- Reject empty confirmation registries unless the explicitly approved no-command mode applies; no-command mode must not silently authorize arbitrary execution.
++- Use exact confirmed command identity as the initial policy. Avoid broad shell normalization that could change meaning.
++- Check ledger-backed successful confirmation, not only a mutable `verified` boolean.
++- Reject interpreter substitution, changed module/payload, added shell operators and unapproved argument variants.
++- Apply the same authorization semantics to task verification, conformance, fixture capture and the later quick implementation.
++- Adjust isolated test setup to confirm the actual command before approving its configuration. Do not weaken the authorization gate to keep fixtures convenient.
++
++## Acceptance cases a confirmed unittest command does not authorize `python -c`, another module, a different executable, an appended shell command or an unconfirmed selection. An exact confirmed command passes. Changed command configuration invalidates its previous evidence.
++
++Apply the shared interfaces and review policy in PLAN.md.
++
++## Constraints
++- Keep scripts/osr.py stdlib-only and Python 3.8-compatible. Preserve unrelated pre-existing work.
++- Obtain human approval of focused failing tests before new gate implementation; no fabricated historical red run.
++- Formal verification uses the exact confirmed full-discovery command above plus configured global verification. Focused checks mentioned in this packet are development checks; never silently remove global verification to avoid a repeated run.
++- Existing fixture edits are limited to this packet contract migration; benchmark edits are its vector and necessary clean setup. T20 CLI changes are version-only. Additional scope requires a reviewed card change.
++
++## Do not
++- Do not manually edit generated governance, run human-only commands, weaken tests, claim independent self-review, sync an unspecified target or publish.
++- Do not promise identical legacy behavior for breaking security corrections.
++
++## Example
++A clean control passes; its corresponding attack is rejected or explicitly UNVERIFIED with evidence tied to the current attempt.
++
++## Definition of done
++- Every mapped requirement and acceptance case has actual evidence. Missing empirical observations remain UNVERIFIED; manual requirements need real human signoff.
++- Formal verification and configured global checks pass with full captured output, exits, count where applicable, failure details and log paths.
++- Fresh spec/quality review inspects actual files and resolves findings under PLAN.md strategy; closure still requires actual OSR gates.
++- Handoff at most 250 words in transcript: task/state, files, behavior, actual checks/logs, review status, limitations and next action. No handoff file is implicitly authorized.
+--- /dev/null
++++ proposed/.ai/tasks/T18.md
+@@ -0,0 +1,46 @@
++# T18: Review only the task's actual changes
++id: T18
++requirements: R7
++depends_on: T16
++allowed_files: scripts/osr.py, tests/test_review_pack_scope.py, tests/test_osr.py, tests/test_hardening_hypotheses.py
++forbidden_files: .ai/ledger.jsonl, .ai/state.json, .ai/STATE.md, .ai/AUDIT.md
++context_files: .ai/PLAN.md
++verify: python -m unittest discover -s tests -v
++
++## Goal
++Review only the task's actual changes. Implement this bounded packet only after actual human plan approval and predecessor closure. This proposal changes no task state.
++
++## Inputs and context
++scripts/osr.py: cmd_review_pack, cmd_start, load_snap, diff_tree, matches; tests/test_hardening_hypotheses.py: test_h9_review_pack_contains_no_builder_reasoning.
++Locate definitions with rg -n and read bounded ranges, relevant callers and tests in the named files before editing. These required source locations supplement context_files. The whole CLI exceeds the context budget; do not dump it or use summaries in place of the actual code. Read SKILL.md and applicable rules once per session.
++
++## Work
++
++- Build the primary review diff from the task-start baseline and allowed files.
++- Include staged, unstaged, added, deleted, renamed and applicable non-Git changes accurately.
++- List out-of-scope changed paths separately without presenting their contents as task implementation.
++- Preserve acceptance criteria, card, declared seams, authoritative source excerpts and adversarial directive.
++- Exclude unrelated governance diffs, previous review reasoning and builder notes. If any input is user-authored text, treat it as review data rather than privileged instructions.
++
++## Acceptance cases two tasks' unrelated changes are separated; pre-existing dirty content is not mislabeled as new task work; required untracked/staged changes appear; upstream citations remain inspectable; deleted files are represented; unrelated notes do not leak into the primary diff.
++
++Apply the shared interfaces and review policy in PLAN.md.
++
++## Constraints
++- Keep scripts/osr.py stdlib-only and Python 3.8-compatible. Preserve unrelated pre-existing work.
++- Obtain human approval of focused failing tests before new gate implementation; no fabricated historical red run.
++- Formal verification uses the exact confirmed full-discovery command above plus configured global verification. Focused checks mentioned in this packet are development checks; never silently remove global verification to avoid a repeated run.
++- Existing fixture edits are limited to this packet contract migration; benchmark edits are its vector and necessary clean setup. T20 CLI changes are version-only. Additional scope requires a reviewed card change.
++
++## Do not
++- Do not manually edit generated governance, run human-only commands, weaken tests, claim independent self-review, sync an unspecified target or publish.
++- Do not promise identical legacy behavior for breaking security corrections.
++
++## Example
++A clean control passes; its corresponding attack is rejected or explicitly UNVERIFIED with evidence tied to the current attempt.
++
++## Definition of done
++- Every mapped requirement and acceptance case has actual evidence. Missing empirical observations remain UNVERIFIED; manual requirements need real human signoff.
++- Formal verification and configured global checks pass with full captured output, exits, count where applicable, failure details and log paths.
++- Fresh spec/quality review inspects actual files and resolves findings under PLAN.md strategy; closure still requires actual OSR gates.
++- Handoff at most 250 words in transcript: task/state, files, behavior, actual checks/logs, review status, limitations and next action. No handoff file is implicitly authorized.
+--- /dev/null
++++ proposed/.ai/tasks/T19.md
+@@ -0,0 +1,49 @@
++# T19: Integrate and prove the new gates against real baselines
++id: T19
++requirements: R8
++depends_on: T18
++allowed_files: evals/eval_suite.py, tests/test_integration_hardening.py, tests/test_osr.py, tests/test_hardening_hypotheses.py, tests/test_fixture_capture.py, tests/test_honest_reporting.py, tests/test_zero_runner.py, .github/workflows/test.yml
++forbidden_files: .ai/ledger.jsonl, .ai/state.json, .ai/STATE.md, .ai/AUDIT.md
++context_files: .ai/PLAN.md
++verify: python -m unittest discover -s tests -v
++
++## Goal
++Integrate and prove the new gates against real baselines. Implement this bounded packet only after actual human plan approval and predecessor closure. This proposal changes no task state.
++
++## Inputs and context
++evals/eval_suite.py: EvalProject, make_task_card, eval_clean_honest_run, eval_clean_fixture_runs, run_adversarial_benchmark; tests/test_osr.py: Project; integrations/antigravity/hooks.json and current lifecycle helpers.
++Locate definitions with rg -n and read bounded ranges, relevant callers and tests in the named files before editing. These required source locations supplement context_files. The whole CLI exceeds the context budget; do not dump it or use summaries in place of the actual code. Read SKILL.md and applicable rules once per session.
++
++## Work
++
++- Finish V14-V19, preserving V1-V12. V13 remains reserved unless deliberately assigned.
++- Each new vector has a passing clean control and explicit expected gate ID. Unexpected exceptions, missing dependencies and invalid setup are ERROR, not CAUGHT.
++- Add a genuine baseline runner that targets a pinned v0.3.1 commit in an isolated checkout/copy. Do not use the `version="0.3.0"` relabel path as historical evidence.
++- Keep source revision, runtime version, platform, command and result in reports. Current uncommitted tree identity must be distinguishable from its HEAD commit.
++- Run equivalent attack/control scenarios against baseline and current code. Unsupported baseline commands are setup differences, not automatically successful defenses or attacks.
++- Test the full lifecycle and changed-plan/task reuse, manual pending, protected approvals, hook human-pending exits, quick integrity and stale artifacts.
++- Reconcile old tests with new exact confirmation and approval contracts using real isolated setup, never production bypass switches.
++- Verify installed integration behavior in a disposable workspace. The existence of hook source files does not demonstrate installation.
++
++## Acceptance cases full suite green; controls pass; intended baseline weaknesses reproduced; new gates catch their attacks; known misses and errors reported separately; no unsupported cross-platform claims. Run remote CI only when available/authorized, and retain the actual run evidence.
++
++Apply the shared interfaces and review policy in PLAN.md.
++
++## Constraints
++- Keep scripts/osr.py stdlib-only and Python 3.8-compatible. Preserve unrelated pre-existing work.
++- Obtain human approval of focused failing tests before new gate implementation; no fabricated historical red run.
++- Formal verification uses the exact confirmed full-discovery command above plus configured global verification. Focused checks mentioned in this packet are development checks; never silently remove global verification to avoid a repeated run.
++- Existing fixture edits are limited to this packet contract migration; benchmark edits are its vector and necessary clean setup. T20 CLI changes are version-only. Additional scope requires a reviewed card change.
++
++## Do not
++- Do not manually edit generated governance, run human-only commands, weaken tests, claim independent self-review, sync an unspecified target or publish.
++- Do not promise identical legacy behavior for breaking security corrections.
++
++## Example
++A clean control passes; its corresponding attack is rejected or explicitly UNVERIFIED with evidence tied to the current attempt.
++
++## Definition of done
++- Every mapped requirement and acceptance case has actual evidence. Missing empirical observations remain UNVERIFIED; manual requirements need real human signoff.
++- Formal verification and configured global checks pass with full captured output, exits, count where applicable, failure details and log paths.
++- Fresh spec/quality review inspects actual files and resolves findings under PLAN.md strategy; closure still requires actual OSR gates.
++- Handoff at most 250 words in transcript: task/state, files, behavior, actual checks/logs, review status, limitations and next action. No handoff file is implicitly authorized.
+--- /dev/null
++++ proposed/.ai/tasks/T20.md
+@@ -0,0 +1,50 @@
++# T20: Documentation, metadata and release candidate
++id: T20
++requirements: R9
++depends_on: T19
++allowed_files: SKILL.md, README.md, CHANGELOG.md, CONTRIBUTING.md, evals/README.md, integrations/README.md, references/guarantees.md, references/setups.md, references/task-cards.md, assets/task-card.md, pyproject.toml, scripts/osr.py, evals/eval_suite.py, .github/workflows/test.yml
++forbidden_files: .ai/ledger.jsonl, .ai/state.json, .ai/STATE.md, .ai/AUDIT.md
++context_files: .ai/PLAN.md, .github/workflows/test.yml
++verify: python -m unittest discover -s tests -v
++
++## Goal
++Documentation, metadata and release candidate. Implement this bounded packet only after actual human plan approval and predecessor closure. This proposal changes no task state.
++
++## Inputs and context
++scripts/osr.py: VERSION, main; evals/eval_suite.py: run_adversarial_benchmark default version; tests/test_osr.py: test_phase6_version_and_docs_integrity; integrations/git/pre_commit.py; .github/workflows/test.yml. Read every allowed document before changing claims.
++Locate definitions with rg -n and read bounded ranges, relevant callers and tests in the named files before editing. These required source locations supplement context_files. The whole CLI exceeds the context budget; do not dump it or use summaries in place of the actual code. Read SKILL.md and applicable rules once per session.
++
++## Work
++
++- Bump version to 0.3.2 only after behavior is implemented and integration checks pass.
++- Correct quick-mode descriptions, approval setup, hook schema, test-count claims and obsolete V11/V12 backlog text.
++- Replace absolute promises such as "no silent failure" with scoped claims tied to supported checks and trust boundaries.
++- Document observed/heuristic/attested evidence, legacy handling, exact command confirmation, unsupported runners and migration behavior.
++- State that test-output parsing does not establish semantic test quality or resist arbitrary forged runner output.
++- Update optional seam/fixture/kind/negative-test template guidance.
++- Resolve pre-commit documentation: current plan-check proves plan structure, not unchanged human approval. Either accurately document this limitation or implement approval enforcement under a separately scoped/tested requirement.
++- Describe the actual CI matrix separately from verified run results. No invented CI URL or release evidence.
++- Prepare release notes and a reproducible checklist. No push, tag, merge or publication is implied by this handoff.
++
++## Acceptance cases all version sources agree; docs match tested behavior; links and documented commands resolve; full verification passes after edits; unsupported guarantees are removed.
++
++Apply the shared interfaces and review policy in PLAN.md.
++
++## Constraints
++- Keep scripts/osr.py stdlib-only and Python 3.8-compatible. Preserve unrelated pre-existing work.
++- Obtain human approval of focused failing tests before new gate implementation; no fabricated historical red run.
++- Formal verification uses the exact confirmed full-discovery command above plus configured global verification. Focused checks mentioned in this packet are development checks; never silently remove global verification to avoid a repeated run.
++- Existing fixture edits are limited to this packet contract migration; benchmark edits are its vector and necessary clean setup. T20 CLI changes are version-only. Additional scope requires a reviewed card change.
++
++## Do not
++- Do not manually edit generated governance, run human-only commands, weaken tests, claim independent self-review, sync an unspecified target or publish.
++- Do not promise identical legacy behavior for breaking security corrections.
++
++## Example
++A clean control passes; its corresponding attack is rejected or explicitly UNVERIFIED with evidence tied to the current attempt.
++
++## Definition of done
++- Every mapped requirement and acceptance case has actual evidence. Missing empirical observations remain UNVERIFIED; manual requirements need real human signoff.
++- Formal verification and configured global checks pass with full captured output, exits, count where applicable, failure details and log paths.
++- Fresh spec/quality review inspects actual files and resolves findings under PLAN.md strategy; closure still requires actual OSR gates.
++- Handoff at most 250 words in transcript: task/state, files, behavior, actual checks/logs, review status, limitations and next action. No handoff file is implicitly authorized.
+--- /dev/null
++++ proposed/.ai/tasks/T21.md
+@@ -0,0 +1,47 @@
++# T21: Synchronize the installed skill after the final source changes
++id: T21
++requirements: R10
++depends_on: T20
++allowed_files: scripts/sync_skill.py, tests/test_sync_skill.py, docs/planning/v0.3.2-proposal/INSTALLATION-HANDOFF.md
++forbidden_files: .ai/ledger.jsonl, .ai/state.json, .ai/STATE.md, .ai/AUDIT.md
++context_files: .ai/PLAN.md, .ai/T0-DEVIATIONS.md
++verify: python -m unittest discover -s tests -v
++
++## Goal
++Synchronize the installed skill after the final source changes. Implement this bounded packet only after actual human plan approval and predecessor closure. This proposal changes no task state.
++
++## Inputs and context
++scripts/sync_skill.py and tests/test_sync_skill.py: test_sync_skill_file_set_included_and_excluded, test_sync_skill_sync_mode_requires_target, test_sync_skill_sync_without_prune_keeps_extras; .ai/T0-DEVIATIONS.md D2-D4.
++Locate definitions with rg -n and read bounded ranges, relevant callers and tests in the named files before editing. These required source locations supplement context_files. The whole CLI exceeds the context budget; do not dump it or use summaries in place of the actual code. Read SKILL.md and applicable rules once per session.
++
++## Work
++
++- First run `sync_skill.py --check --target <explicit-target>`.
++- Sync only to the explicitly authorized target; do not infer permission for another account or install location.
++- Do not prune by default. Inspect and obtain the necessary scope authorization before deleting extras.
++- Re-run the same hash check after sync and record the result.
++- Smoke-test the installed CLI from a disposable project, not the live development workflow.
++- Decide/document which tests are repository-only: the sync set excludes pyproject.toml and docs/vendor, while some tests depend on them. Do not falsely advertise the installed directory as a complete source checkout; do not broaden the sync set without revisiting the recorded decision.
++
++## Acceptance cases the declared shipped set matches hashes; installed CLI reports 0.3.2; disposable smoke test passes; intentionally excluded assets and any retained extras are disclosed. Do not claim the whole destination is identical when only a declared subset is checked.
++
++Installation target is UNSPECIFIED. Before destination writes obtain the operator target and an approved card update naming it in allowed_files. Do not infer a target. Record declared-set parity, exclusions and smoke-test evidence in INSTALLATION-HANDOFF.md.
++
++## Constraints
++- Keep scripts/osr.py stdlib-only and Python 3.8-compatible. Preserve unrelated pre-existing work.
++- Obtain human approval of focused failing tests before new gate implementation; no fabricated historical red run.
++- Formal verification uses the exact confirmed full-discovery command above plus configured global verification. Focused checks mentioned in this packet are development checks; never silently remove global verification to avoid a repeated run.
++- Existing fixture edits are limited to this packet contract migration; benchmark edits are its vector and necessary clean setup. T20 CLI changes are version-only. Additional scope requires a reviewed card change.
++
++## Do not
++- Do not manually edit generated governance, run human-only commands, weaken tests, claim independent self-review, sync an unspecified target or publish.
++- Do not promise identical legacy behavior for breaking security corrections.
++
++## Example
++Installation target is UNSPECIFIED. Before destination writes obtain the operator target and an approved card update naming it in allowed_files. Do not infer a target. Record declared-set parity, exclusions and smoke-test evidence in INSTALLATION-HANDOFF.md.
++
++## Definition of done
++- Every mapped requirement and acceptance case has actual evidence. Missing empirical observations remain UNVERIFIED; manual requirements need real human signoff.
++- Formal verification and configured global checks pass with full captured output, exits, count where applicable, failure details and log paths.
++- Fresh spec/quality review inspects actual files and resolves findings under PLAN.md strategy; closure still requires actual OSR gates.
++- Handoff at most 250 words in transcript: task/state, files, behavior, actual checks/logs, review status, limitations and next action. No handoff file is implicitly authorized.

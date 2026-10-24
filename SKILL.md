@@ -31,7 +31,7 @@ Each has a reason. The reason matters more than the rule, so you can apply it to
 2. **Read before you write.** Open every file before editing it, and the card's `context_files` before starting. Guessing at file contents is the most common source of invented code.
 3. **Never elide.** No "rest unchanged", no `...`, no TODO stubs, no truncated files. The tool flags them, but more importantly a half-written file silently destroys working code.
 4. **Never invent references.** Before using an import, function, flag, config key or endpoint, find where it is defined (grep, open the file, read the docs). If you cannot find it, it does not exist.
-5. **Stay inside the card.** Touch only `allowed_files`. Needing another file means the card is wrong: stop and report, do not widen scope quietly.
+5. **Stay inside the card.** Touch only `allowed_files`. Needing another file means the card is wrong: stop and report, do not widen scope quietly. (Rule 5 limits edits only. Reading provider code or contracts via `context_files` is allowed and expected).
 6. **Never weaken a test to make it pass.** Do not delete assertions, add skips, or loosen expectations. Fix the code or ask the human.
 7. **Surface assumptions, do not bury them.** Ambiguity goes to the human before it goes into code. A wrong guess implemented confidently costs more than a question.
 8. **Every retry must change something.** Same input gives the same failure. Diagnose first (see "When something fails").
@@ -44,7 +44,7 @@ You wear three hats. Keep them separate; mixing them is how mistakes get approve
 
 - **Orchestrator:** turns the design into a plan and task cards, picks the next task, runs triage on failures. Never writes feature code while wearing this hat.
 - **Builder:** implements exactly one task card. Reads only the card and its context files. Does not review its own work.
-- **Reviewer:** assumes the code is wrong until the evidence says otherwise. Reviews the diff, not the builder's explanation of it. Run `osr review-pack Tn` to package an unbiased review bundle containing only the task card, acceptance criteria, and unified diff without builder reasoning.
+- **Reviewer:** assumes the code is wrong until the evidence says otherwise. Reviews the diff and authoritative upstream seam sources, not the builder's explanation of it. Run `osr review-pack Tn` to package an adversarial review bundle containing the task card, acceptance criteria, unified diff, declared seams, and authoritative sources with the adversarial directive: *"For every external field, find its definition in the provided source. Report any field the code uses that the source does not declare. Do not trust the builder's explanation."*
 
 With one model, switch hats explicitly and start the reviewer pass fresh: re-read the changed files from disk, do not rely on what you remember writing. With several models or sessions, give the reviewer role to a different model than the builder. Pass `--model` on `start` and `--reviewer` on `review`; the tool records when they are the same and shows it in the audit (set `require_distinct_reviewer` in `.ai/config.json` to forbid it). See `references/setups.md`.
 
@@ -54,11 +54,11 @@ Each phase has a gate the tool enforces. You cannot skip ahead because the next 
 
 **Phase 0, ground truth.** `osr init`, then `osr detect`, then read and correct `.ai/config.json`, then `osr confirm-commands`. Detect only guesses from marker files; confirm actually runs each command and records whether it works. Brand-new project with nothing to run? Set `"allow_no_commands": true`, and expect many requirements to need human sign-off.
 
-**Phase 1, plan.** Fill `.ai/PLAN.md` from the user's design (template in `assets/PLAN.md`): goal, non-goals, numbered requirements `R1..Rn`, each with a concrete acceptance criterion and `Check: auto|manual`, plus interfaces and open questions. Put every doubt in Open Questions and resolve it with the human. Run `osr plan-check`. Then **stop and ask the human to review and run `osr approve-plan --by <name>`**. Editing PLAN.md afterwards voids the approval.
+**Phase 1, plan.** Fill `.ai/PLAN.md` from the user's design (template in `assets/PLAN.md`): goal, non-goals, numbered requirements `R1..Rn`, each with a concrete acceptance criterion and `Check: auto|manual` (manual checks reference a test script file), plus interfaces and open questions. Put every doubt in Open Questions and resolve it with the human. Run `osr plan-check`. Then **stop and ask the human to review and run `osr approve-plan --by <name>`**. Editing PLAN.md afterwards voids the approval.
 
 **Phase 2, decompose.** One card per task in `.ai/tasks/Tn.md` (template `assets/task-card.md`, guidance `references/task-cards.md`). A card is a self-contained prompt: goal, exact context, constraints, a Do-not list, an example, a definition of done, `allowed_files`, and a `verify:` command that tests this task. Define shared interfaces first, add an integration task for anything that spans tasks. Run `osr task-check --all` (checks every requirement is covered, scope is narrow, context fits the budget).
 
-**Phase 3, implement.** `osr start Tn --model <your-name>` snapshots the tree. Build only what the card says. Run `osr verify Tn`: it runs static checks (scope, placeholders, shrinkage, hallucinated imports, syntax) and then the real commands, and records the output itself.
+**Phase 3, implement.** `osr start Tn --model <your-name>` snapshots the tree. Build only what the card says. Run `osr verify Tn`: it runs static checks (scope, placeholders, shrinkage, hallucinated imports, syntax) and then the real commands, and records the output itself. *Recommended practice for realtime features:* test realtime code against a real local server (for example a real WebSocket server) rather than an in-memory mock.
 
 **Phase 4, spec review.** Write `.ai/reviews/Tn.spec.md` (template `assets/spec-review.md`): one line per requirement with evidence as `@ file:line "exact snippet"`. The tool opens the file and checks the snippet is really there. Then `osr review Tn spec --reviewer <name>`.
 
@@ -68,7 +68,7 @@ Each phase has a gate the tool enforces. You cannot skip ahead because the next 
 
 **Phase 7, integrate.** After dependent tasks finish, run the integration task. Components that pass alone can fail together; do not skip this.
 
-**Phase 8, audit.** `osr audit` writes `.ai/AUDIT.md`: every requirement mapped to a task and evidence. Run `osr anchor` to commit the ledger head hash externally (e.g. `.osr-anchor` or git commit), detecting any subsequent ledger rollback. Exit 0 means all verified or human-signed. Exit 2 means finished, with items awaiting human sign-off. Exit 1 means gaps. Report the audit to the human as it is, including UNVERIFIED items and waivers.
+**Phase 8, audit.** `osr audit` writes `.ai/AUDIT.md`: every requirement mapped to a task and evidence. Run `osr anchor --out <external-path>` to commit the ledger head hash out-of-band (e.g. to a supervisor-controlled volume or CI artifact store). In-repo anchors (`.osr-anchor`) do not protect against models with repository write permissions; tamper-evidence requires out-of-band anchor verification via `osr ledger-verify --anchor <path>` and `osr audit --anchor <path>`. Exit 0 means all verified or human-signed. Exit 2 means finished, with items awaiting human sign-off. Exit 1 means gaps. Report the audit to the human as it is, including UNVERIFIED items and waivers.
 
 ## Scale the paperwork, never the gates
 

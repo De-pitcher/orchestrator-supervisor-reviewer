@@ -1,0 +1,35 @@
+# T27 batch S8
+argv: ["C:\\Python314\\python.exe", "-m", "unittest", "-v", "test_sync_skill.SyncSkillTests.test_sync_skill_excludes_use_root_relative_paths", "test_sync_skill.SyncSkillTests.test_sync_skill_extra_outside_synced_items_not_flagged", "test_sync_skill.SyncSkillTests.test_sync_skill_file_set_included_and_excluded", "test_sync_skill.SyncSkillTests.test_sync_skill_negative_differing_file", "test_sync_skill.SyncSkillTests.test_sync_skill_negative_extra_file_inside_synced_item", "test_sync_skill.SyncSkillTests.test_sync_skill_negative_missing_file", "test_sync_skill.SyncSkillTests.test_sync_skill_prune_removes_extras_inside_synced_items_only", "test_sync_skill.SyncSkillTests.test_sync_skill_prune_with_check_is_rejected", "test_sync_skill.SyncSkillTests.test_sync_skill_real_repo_sync_and_check_smoke", "test_sync_skill.SyncSkillTests.test_sync_skill_script_exists", "test_sync_skill.SyncSkillTests.test_sync_skill_sync_mode_requires_target", "test_sync_skill.SyncSkillTests.test_sync_skill_sync_without_prune_keeps_extras", "test_tautological_ast.TestTautologicalAst.test_tautological_assertion_ast", "test_zero_runner.TestZeroRunner.test_verify_zero_tests_rejected"]
+cwd: C:\Users\sam\Documents\sparkz\orchestrator-supervisor-reviewer
+pythonpath: C:\Users\sam\Documents\sparkz\orchestrator-supervisor-reviewer\tests
+exit: 0
+elapsed_seconds: 10.997
+tree_digest_before: b17deff95afe64050a38b2d24c0181972d2831ab32f85cf1884d0cf5e5c696fd
+tree_digest_after: b17deff95afe64050a38b2d24c0181972d2831ab32f85cf1884d0cf5e5c696fd
+freeze_digest: b17deff95afe64050a38b2d24c0181972d2831ab32f85cf1884d0cf5e5c696fd
+scheduled_ids: 14
+observed_ids: 14
+
+===== STDOUT =====
+
+===== STDERR =====
+test_sync_skill_excludes_use_root_relative_paths (test_sync_skill.SyncSkillTests.test_sync_skill_excludes_use_root_relative_paths) ... ok
+test_sync_skill_extra_outside_synced_items_not_flagged (test_sync_skill.SyncSkillTests.test_sync_skill_extra_outside_synced_items_not_flagged) ... ok
+test_sync_skill_file_set_included_and_excluded (test_sync_skill.SyncSkillTests.test_sync_skill_file_set_included_and_excluded) ... ok
+test_sync_skill_negative_differing_file (test_sync_skill.SyncSkillTests.test_sync_skill_negative_differing_file) ... ok
+test_sync_skill_negative_extra_file_inside_synced_item (test_sync_skill.SyncSkillTests.test_sync_skill_negative_extra_file_inside_synced_item) ... ok
+test_sync_skill_negative_missing_file (test_sync_skill.SyncSkillTests.test_sync_skill_negative_missing_file) ... ok
+test_sync_skill_prune_removes_extras_inside_synced_items_only (test_sync_skill.SyncSkillTests.test_sync_skill_prune_removes_extras_inside_synced_items_only) ... ok
+test_sync_skill_prune_with_check_is_rejected (test_sync_skill.SyncSkillTests.test_sync_skill_prune_with_check_is_rejected) ... ok
+test_sync_skill_real_repo_sync_and_check_smoke (test_sync_skill.SyncSkillTests.test_sync_skill_real_repo_sync_and_check_smoke) ... ok
+test_sync_skill_script_exists (test_sync_skill.SyncSkillTests.test_sync_skill_script_exists) ... ok
+test_sync_skill_sync_mode_requires_target (test_sync_skill.SyncSkillTests.test_sync_skill_sync_mode_requires_target) ... ok
+test_sync_skill_sync_without_prune_keeps_extras (test_sync_skill.SyncSkillTests.test_sync_skill_sync_without_prune_keeps_extras) ... ok
+test_tautological_assertion_ast (test_tautological_ast.TestTautologicalAst.test_tautological_assertion_ast) ... ok
+test_verify_zero_tests_rejected (test_zero_runner.TestZeroRunner.test_verify_zero_tests_rejected) ... ok
+
+----------------------------------------------------------------------
+Ran 14 tests in 10.801s
+
+OK
+
