@@ -487,6 +487,63 @@
         "result_sha": "8bd1d37073b3fe085276cd1989dfac5d881757570aeec99a90ce2e2523fbf76c",
         "path_count": 1
       }
+    },
+    "T29": {
+      "status": "done",
+      "attempts": 1,
+      "failures": 0,
+      "model": "codex",
+      "input_hash": "06ebc455a9f0f9c1ed76e9451cfb5384c0ac943f8f400f74bb4bbc95bd23f9d3",
+      "triaged_attempt": 0,
+      "blocked": null,
+      "requires": null,
+      "extra_attempts": 0,
+      "baseline": {
+        "task_0": {
+          "cmd": "python -m unittest discover -s tests -p test_commit_gate.py -v",
+          "ok": true,
+          "exit": 0,
+          "sha": "f5e5e9a17e21b3ae8db23a57992a57b18e0134aac82c7763911cde3c41854bee",
+          "run_id": "1fd79ebb3d204ea3bac9af51a3ae7e08",
+          "log": "20261024-005035-0000-T29-baseline-task-0-1fd79ebb3d204ea3bac9af51a3ae7e08.log"
+        }
+      },
+      "start": {
+        "approval_epoch": 298,
+        "start_base_sha": "8bd1d37073b3fe085276cd1989dfac5d881757570aeec99a90ce2e2523fbf76c",
+        "start_snapshot_sha": "8bd1d37073b3fe085276cd1989dfac5d881757570aeec99a90ce2e2523fbf76c",
+        "plan_raw_sha": "319ad087dcb02894a4f79804d69385f07d532624294e8fd8688009c0ded14659",
+        "config_sha": "5049144895bfe19f3c8fbbf9a9c1dce3006f6e2ab9ab5d41127ad50a1e15a0a9",
+        "ignore_sha": "a30a615a8125bdf78d132161a5777d65be1268bc48281883c20d8170189c801f",
+        "card_sha": "18fab5f21f53a4cc128d5f4794752fdf0bb87fbab9b79895306496659e877b38",
+        "seq": 333
+      },
+      "completion": {
+        "schema": "osr.completion.v1",
+        "task": "T29",
+        "attempt": 1,
+        "approval_epoch": 298,
+        "plan_sha": "319ad087dcb02894a4f79804d69385f07d532624294e8fd8688009c0ded14659",
+        "config_sha": "5049144895bfe19f3c8fbbf9a9c1dce3006f6e2ab9ab5d41127ad50a1e15a0a9",
+        "ignore_sha": "a30a615a8125bdf78d132161a5777d65be1268bc48281883c20d8170189c801f",
+        "card_sha": "18fab5f21f53a4cc128d5f4794752fdf0bb87fbab9b79895306496659e877b38",
+        "inputs_sha": "8d4d77185d0d6b1bbeeaee8b96ba74dc08eb362bb2ae864f440840cf573ff08f",
+        "start_base_sha": "8bd1d37073b3fe085276cd1989dfac5d881757570aeec99a90ce2e2523fbf76c",
+        "start_snapshot_sha": "8bd1d37073b3fe085276cd1989dfac5d881757570aeec99a90ce2e2523fbf76c",
+        "verified_fp": "a9b22e1b0bf8d130fff86f45095ec01d1ebe47e16666042699c61e778847bb0e",
+        "verify_seq": 337,
+        "spec_review_seq": 338,
+        "quality_review_seq": 339,
+        "start_seq": 333,
+        "delta": {
+          "CHANGELOG.md": "81350bbe5fe236ef66103f172a4e7035dafd0704da37ba60fe440b1d85e92ea9",
+          "tests/test_osr.py": "28177f767b40bedecfaf665940fc0b99537b175d895ecb673a7a7e0a6fbc663d",
+          "integrations/git/pre-commit": "43e2fe85cd24a78a15df838a46c4e24989105a5e8db2a55c8c5130163b592221",
+          "tests/test_commit_gate.py": "be2a111354f0114719d143d533d41a884ea1e086c785788b18c9ea4f9420e77e"
+        },
+        "result_sha": "e193cb0ac2cdc11bed39cc143d3a7edf7d40d64b62b61c30dcf273e9db5ffd0d",
+        "path_count": 4
+      }
     }
   },
   "waivers": [

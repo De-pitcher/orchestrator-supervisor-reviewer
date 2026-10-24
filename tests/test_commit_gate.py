@@ -892,6 +892,16 @@ class TestStagedByteParity(_CommitGateCase):
 class TestWrapperInstallation(_CommitGateCase):
     """The shell wrapper must find its helper in documented layouts."""
 
+    def test_wrapper_source_is_executable(self):
+        result = subprocess.run(
+            ["git", "ls-files", "--stage", "--", "integrations/git/pre-commit"],
+            cwd=str(REPO_ROOT), capture_output=True, text=True,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(result.stdout.startswith("100755 "), result.stdout)
+        if os.name != "nt":
+            self.assertTrue(os.access(WRAPPER_SRC, os.X_OK), "checkout lost executable hook mode")
+
     def commit(self):
         return self.git("commit", "-m", "hook run", check=False)
 

@@ -1,5 +1,6 @@
 #!/bin/sh
 # Git pre-commit wrapper.
+# Keep Git mode 100755: POSIX Git ignores nonexecutable hooks.
 #
 # Supported layouts:
 #   .git/hooks/pre-commit  + .git/hooks/pre_commit.py   (copied pair)

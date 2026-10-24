@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### CI portability follow-up — 2026-10-24
+- PR #3 exposed two failures outside the original Windows/Python 3.14 run:
+  Unix Git ignored the nonexecutable hook wrapper, and rapid same-size fixture
+  rewrites could reuse timestamp-based Python bytecode on all platforms.
+- Track the wrapper as executable and assert its Git mode and POSIX checkout
+  permission. Fixture writes invalidate only the rewritten module's compiled
+  cache; a deterministic equal-size/equal-timestamp regression preserves an
+  unrelated cache and checks that the new source is actually imported.
+- The earlier 249-test result remains a historical local result. Cross-platform
+  CI outcomes for this follow-up are reported separately on PR #3.
+
 ### Evidence hardening — 2026-10-23–24
 
 Completed the T22–T27 packet against requirements R20–R25. This is an
